@@ -12,9 +12,10 @@ export interface MethodDetailsProps {
   darkMode: boolean;
   onAttrToggle: (typeName: string, path: string[]) => void;
   selectedAttrs: Record<string, Record<string, boolean>>;
+  onSelectAllAttrs: (typeName: string, sample: any) => void;
 }
 
-export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, darkMode, onAttrToggle, selectedAttrs }) => {
+export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, darkMode, onAttrToggle, selectedAttrs, onSelectAllAttrs }) => {
   const parameters = details.parameters || [];
   const requestBody = details.requestBody;
   const responses = details.responses || {};
@@ -83,6 +84,47 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
                 }
                 return sample && typeName ? (
                   <Box key={j}>
+                    {/* Select All/Deselect All button for this type */}
+                    <Box mb={1}>
+                      {(() => {
+                        // Determine if all attributes are selected
+                        function collectPaths(obj: any, prefix: string[] = []): string[] {
+                          if (typeof obj !== 'object' || obj === null) return [];
+                          if (Array.isArray(obj)) {
+                            return collectPaths(obj[0], [...prefix, '0']);
+                          }
+                          let paths: string[] = [];
+                          for (const [key, val] of Object.entries(obj)) {
+                            const currentPath = [...prefix, key];
+                            paths.push(currentPath.join('.'));
+                            if (typeof val === 'object' && val !== null) {
+                              paths = paths.concat(collectPaths(val, currentPath));
+                            }
+                          }
+                          return paths;
+                        }
+                        const allPaths = collectPaths(sample);
+                        const typeAttrs = selectedAttrs[typeName] || {};
+                        const allSelected = allPaths.length > 0 && allPaths.every(path => typeAttrs[path]);
+                        return (
+                          <button
+                            style={{
+                              background: darkMode ? '#2D3748' : '#E2E8F0',
+                              color: darkMode ? '#F1F1F1' : '#2D3748',
+                              border: 'none',
+                              borderRadius: 4,
+                              padding: '2px 8px',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              marginBottom: 4,
+                            }}
+                            onClick={() => onSelectAllAttrs(typeName, sample)}
+                          >
+                            {allSelected ? 'Deselect All' : 'Select All'}
+                          </button>
+                        );
+                      })()}
+                    </Box>
                     {/* Hide the raw type/schema line */}
                     <Box as="pre" fontSize="xs" bg={darkMode ? 'gray.800' : 'gray.100'} color={darkMode ? 'gray.100' : 'gray.800'} p={2} borderRadius="md" mt={1} maxW="400px" overflowX="auto">
                       <JsonWithCheckboxes value={sample} path={[]} selected={isPlainObject(selectedAttrs[typeName]) ? selectedAttrs[typeName] : {}} onToggle={path => onAttrToggle(typeName, path)} darkMode={darkMode} />

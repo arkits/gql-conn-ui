@@ -38,9 +38,8 @@ function mapOpenApiTypeToGraphQL(schema: any, openApi: any, selectedAttrs: Recor
   if (schema.type === 'array') {
     // For arrays, use the correct item type name
     let itemTypeName = typeName.replace(/s$/, '');
-    if (hasRef(schema.items as unknown)) {
-      // @ts-expect-error: checked by hasRef
-      itemTypeName = (schema.items as any)['$ref'].replace('#/components/schemas/', '');
+    if (hasRef(schema.items)) {
+      itemTypeName = (schema.items as { $ref: string }).$ref.replace('#/components/schemas/', '');
     }
     return new GraphQLList(mapOpenApiTypeToGraphQL(schema.items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMap));
   }
@@ -122,9 +121,33 @@ function buildGraphQLType(
     const refName = schema.$ref.replace('#/components/schemas/', '');
     if (typeMap[refName]) return typeMap[refName];
     const resolved = openApi?.components?.schemas?.[refName];
-    const gqlType = buildGraphQLType(refName, resolved, openApi, selectedAttrs, refName, [], typeMap);
+    // --- PATCH START ---
+    // If selectedAttrs[refName] is empty, infer from parent
+    let nestedSelectedAttrs = selectedAttrs[refName];
+    if (!nestedSelectedAttrs || Object.keys(nestedSelectedAttrs).length === 0) {
+      // Find all parent selectedAttrs[typeName] keys that start with the current path
+      const parentSelected = selectedAttrs[typeName] || {};
+      const prefix = path.length > 0 ? path.join('.') + '.' : '';
+      nestedSelectedAttrs = {};
+      for (const attrPath in parentSelected) {
+        if (attrPath.startsWith(prefix)) {
+          const rest = attrPath.slice(prefix.length);
+          if (rest && !rest.includes('.')) {
+            nestedSelectedAttrs[rest] = true;
+          } else if (rest) {
+            // For deeper nesting, only take the first segment
+            const first = rest.split('.')[0];
+            nestedSelectedAttrs[first] = true;
+          }
+        }
+      }
+    }
+    // Pass the inferred selectedAttrs for the nested type
+    const newSelectedAttrs = { ...selectedAttrs, [refName]: nestedSelectedAttrs };
+    const gqlType = buildGraphQLType(refName, resolved, openApi, newSelectedAttrs, refName, [], typeMap);
     typeMap[refName] = gqlType as GraphQLObjectType;
     return gqlType;
+    // --- PATCH END ---
   }
   if (schema.type === 'object') {
     const selected = selectedAttrs[typeName] || {};
@@ -135,7 +158,7 @@ function buildGraphQLType(
         if (selected[attrPath]) {
           // For nested objects/arrays, pass the correct type name
           let nestedTypeName = key;
-          if (propSchema && propSchema.$ref) {
+          if (propSchema && hasRef(propSchema)) {
             nestedTypeName = propSchema.$ref.replace('#/components/schemas/', '');
           }
           fields[key] = {
@@ -154,8 +177,8 @@ function buildGraphQLType(
   if (schema.type === 'array') {
     // For arrays, use the correct item type name
     let itemTypeName = typeName.replace(/s$/, '');
-    if (hasRef(schema.items as unknown)) {
-      itemTypeName = (schema.items as any)['$ref'].replace('#/components/schemas/', '');
+    if (hasRef(schema.items)) {
+      itemTypeName = (schema.items as { $ref: string }).$ref.replace('#/components/schemas/', '');
     }
     return new GraphQLList(buildGraphQLType(itemTypeName, schema.items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMap) as GraphQLObjectType);
   }
@@ -165,6 +188,83 @@ function buildGraphQLType(
 
 export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs: Record<string, Record<string, boolean>>): string {
   if (!openApi) return '';
+  // --- PATCH START: Preprocess selectedAttrs for nested types ---
+  // Deep copy to avoid mutating input
+  const enrichedSelectedAttrs: Record<string, Record<string, boolean>> = JSON.parse(JSON.stringify(selectedAttrs));
+  // --- PATCH START: Robust handling for object and array references ---
+  function addSelectedAttrForReference(schema: any, pathSegments: string[], enrichedSelectedAttrs: Record<string, Record<string, boolean>>) {
+    if (!schema || pathSegments.length === 0) return;
+    const [field, ...rest] = pathSegments;
+    let nextSchema = null;
+    let nextTypeName = null;
+    // Step into the field if it exists
+    if (schema.properties && schema.properties[field]) {
+      nextSchema = schema.properties[field];
+      // If it's a $ref (object reference)
+      if (nextSchema.$ref) {
+        nextTypeName = nextSchema.$ref.replace('#/components/schemas/', '');
+        if (rest.length > 0) {
+          if (!enrichedSelectedAttrs[nextTypeName]) enrichedSelectedAttrs[nextTypeName] = {};
+          enrichedSelectedAttrs[nextTypeName][rest.join('.')] = true;
+        }
+        return;
+      }
+      // If it's an array of $ref (array reference)
+      if (nextSchema.type === 'array' && nextSchema.items && nextSchema.items.$ref) {
+        nextTypeName = nextSchema.items.$ref.replace('#/components/schemas/', '');
+        // Only add the next segment (e.g., for tags.id, add 'id' to Tag)
+        if (rest.length > 0) {
+          const [arrayField, ...arrayRest] = rest;
+          if (!enrichedSelectedAttrs[nextTypeName]) enrichedSelectedAttrs[nextTypeName] = {};
+          if (arrayField) {
+            enrichedSelectedAttrs[nextTypeName][arrayField] = true;
+          }
+          // If there is deeper nesting, support it (e.g., tags.subfield.id)
+          if (arrayRest.length > 0) {
+            addSelectedAttrForReference(nextSchema.items, arrayRest, enrichedSelectedAttrs);
+          }
+        }
+        return;
+      }
+      // If it's a plain object, keep walking
+      if (rest.length > 0) {
+        addSelectedAttrForReference(nextSchema, rest, enrichedSelectedAttrs);
+      }
+    }
+    // If the root schema is an array
+    else if (schema.type === 'array' && schema.items) {
+      nextSchema = schema.items;
+      if (nextSchema.$ref) {
+        nextTypeName = nextSchema.$ref.replace('#/components/schemas/', '');
+        if (rest.length > 0) {
+          const [arrayField, ...arrayRest] = rest;
+          if (!enrichedSelectedAttrs[nextTypeName]) enrichedSelectedAttrs[nextTypeName] = {};
+          if (arrayField) {
+            enrichedSelectedAttrs[nextTypeName][arrayField] = true;
+          }
+          if (arrayRest.length > 0) {
+            addSelectedAttrForReference(nextSchema, arrayRest, enrichedSelectedAttrs);
+          }
+        }
+        return;
+      }
+      if (rest.length > 0) {
+        addSelectedAttrForReference(nextSchema, rest, enrichedSelectedAttrs);
+      }
+    }
+  }
+
+  for (const [typeName, attrs] of Object.entries(selectedAttrs)) {
+    const schema = openApi?.components?.schemas?.[typeName];
+    for (const attrPath of Object.keys(attrs)) {
+      if (attrPath.includes('.')) {
+        const pathSegments = attrPath.split('.');
+        addSelectedAttrForReference(schema, pathSegments, enrichedSelectedAttrs);
+      }
+    }
+  }
+  // --- PATCH END ---
+
   const typeMap: Record<string, GraphQLObjectType> = {};
   const inputTypeMap: Record<string, GraphQLInputObjectType> = {};
   const queryFields: GraphQLFieldConfigMap<any, any> = {};
@@ -194,7 +294,7 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
         } else {
           typeName = 'Type_' + code;
         }
-        const selected = selectedAttrs[typeName];
+        const selected = enrichedSelectedAttrs[typeName];
         if (selected && Object.keys(selected).length > 0) {
           // Build the GraphQL type (handle array response)
           let gqlType: GraphQLOutputType;
@@ -203,9 +303,9 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
             if (hasRef(contentObj.schema.items as unknown)) {
               itemTypeName = (contentObj.schema.items as any)['$ref'].replace('#/components/schemas/', '');
             }
-            gqlType = new GraphQLList(buildGraphQLType(itemTypeName, contentObj.schema.items, openApi, selectedAttrs, itemTypeName, [], typeMap) as GraphQLObjectType);
+            gqlType = new GraphQLList(buildGraphQLType(itemTypeName, contentObj.schema.items, openApi, enrichedSelectedAttrs, itemTypeName, [], typeMap) as GraphQLObjectType);
           } else {
-            gqlType = buildGraphQLType(typeName, contentObj.schema, openApi, selectedAttrs, typeName, [], typeMap) as GraphQLObjectType;
+            gqlType = buildGraphQLType(typeName, contentObj.schema, openApi, enrichedSelectedAttrs, typeName, [], typeMap) as GraphQLObjectType;
           }
 
           // Build GraphQL arguments from OpenAPI params

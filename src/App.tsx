@@ -31,6 +31,39 @@ function App() {
     });
   };
 
+  // Handler for selecting all attributes for a type
+  const handleSelectAllAttrs = (typeName: string, sample: any) => {
+    function collectPaths(obj: any, prefix: string[] = []): string[] {
+      if (typeof obj !== 'object' || obj === null) return [];
+      if (Array.isArray(obj)) {
+        return collectPaths(obj[0], [...prefix, '0']);
+      }
+      let paths: string[] = [];
+      for (const [key, val] of Object.entries(obj)) {
+        const currentPath = [...prefix, key];
+        paths.push(currentPath.join('.'));
+        if (typeof val === 'object' && val !== null) {
+          paths = paths.concat(collectPaths(val, currentPath));
+        }
+      }
+      return paths;
+    }
+    setSelectedAttrs(prev => {
+      const allPaths = collectPaths(sample);
+      const typeAttrs = prev[typeName] || {};
+      const allSelected = allPaths.every(path => typeAttrs[path]);
+      if (allSelected) {
+        // Deselect all
+        return { ...prev, [typeName]: {} };
+      } else {
+        // Select all
+        const newTypeAttrs: Record<string, boolean> = {};
+        allPaths.forEach(path => { newTypeAttrs[path] = true; });
+        return { ...prev, [typeName]: newTypeAttrs };
+      }
+    });
+  };
+
   useEffect(() => {
     if (openApi && Object.keys(selectedAttrs).some(typeName => Object.keys(selectedAttrs[typeName] || {}).length > 0)) {
       setGraphqlSchema(generateGraphQLSchemaFromSelections(openApi, selectedAttrs));
@@ -69,11 +102,21 @@ function App() {
     if (!openApi?.paths) return [];
     return Object.entries(openApi.paths).map(([path, methods]: any) => ({
       path,
-      methods: Object.entries(methods).map(([method, details]: any) => ({
-        method: method.toUpperCase(),
-        details,
-      })),
-    }));
+      methods: Object.entries(methods)
+        .filter(([_, details]: any) => {
+          // Only include methods with a 2xx response that has a content property
+          const responses = details.responses || {};
+          return Object.entries(responses).some(
+            ([code, resp]: any) => /^2\d\d$/.test(code) && resp && resp.content
+          );
+        })
+        .map(([method, details]: any) => ({
+          method: method.toUpperCase(),
+          details,
+        })),
+    }))
+    // Also filter out paths with no methods left
+    .filter((node: any) => node.methods.length > 0);
   }
 
   return (
@@ -142,7 +185,7 @@ function App() {
           <Box w="40%" minW="320px" maxW="600px" p={6} overflowY="auto" borderRight="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} bg={darkMode ? '#18181B' : 'white'}>
             <Heading size="sm" mb={4} color="teal.600">OpenAPI Spec</Heading>
             {openApiTree.length > 0 ? (
-              <TreeView tree={openApiTree} openApi={openApi} darkMode={darkMode} selectedAttrs={selectedAttrs} onAttrToggle={handleAttrToggle} />
+              <TreeView tree={openApiTree} openApi={openApi} darkMode={darkMode} selectedAttrs={selectedAttrs} onAttrToggle={handleAttrToggle} onSelectAllAttrs={handleSelectAllAttrs} />
             ) : (
               <Box color="gray.400">Upload an OpenAPI spec to visualize endpoints.</Box>
             )}
@@ -193,27 +236,27 @@ function App() {
               <TabsContentGroup display="flex" flexDirection="column" flex={1} minH={0} h="100%">
                 <TabsContent value="schema" flex={1} minH={0} h="100%" display="flex" flexDirection="column">
                   <Heading size="sm" mb={4} color="purple.600">GraphQL Schema</Heading>
-                  <Box borderRadius="md" overflow="hidden" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} display="flex" flexDirection="column">
+                  <Box borderRadius="md" overflow="auto" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} minH={0} h="100%" display="flex" flexDirection="column">
                     <MonacoEditor
                       height="100%"
                       width="100%"
                       defaultLanguage="graphql"
                       theme={darkMode ? "vs-dark" : "light"}
                       value={graphqlSchema}
-                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true }}
+                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: true, automaticLayout: true }}
                     />
                   </Box>
                 </TabsContent>
                 <TabsContent value="yaml" flex={1} minH={0} h="100%" display="flex" flexDirection="column">
                   <Heading size="sm" mb={4} color="purple.600">App Config YAML</Heading>
-                  <Box borderRadius="md" overflow="hidden" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} display="flex" flexDirection="column">
+                  <Box borderRadius="md" overflow="auto" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} minH={0} h="100%" display="flex" flexDirection="column">
                     <MonacoEditor
                       height="100%"
                       width="100%"
                       defaultLanguage="yaml"
                       theme={darkMode ? "vs-dark" : "light"}
                       value={appConfigYaml}
-                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true }}
+                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: true, automaticLayout: true }}
                     />
                   </Box>
                 </TabsContent>

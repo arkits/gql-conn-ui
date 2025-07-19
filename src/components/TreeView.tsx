@@ -9,9 +9,10 @@ export interface TreeViewProps {
   darkMode: boolean;
   selectedAttrs: Record<string, Record<string, boolean>>;
   onAttrToggle: (typeName: string, path: string[]) => void;
+  onSelectAllAttrs: (typeName: string, sample: any) => void;
 }
 
-export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, selectedAttrs, onAttrToggle }) => {
+export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, selectedAttrs, onAttrToggle, onSelectAllAttrs }) => {
   const [expandedEndpoints, setExpandedEndpoints] = useState<Record<string, boolean>>({});
   const [expandedMethods, setExpandedMethods] = useState<Record<string, Record<string, boolean>>>({});
 
@@ -52,6 +53,7 @@ export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, sel
                       darkMode={darkMode}
                       onAttrToggle={onAttrToggle}
                       selectedAttrs={selectedAttrs}
+                      onSelectAllAttrs={onSelectAllAttrs}
                     />
                   )}
                 </Box>

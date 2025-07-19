@@ -7,6 +7,7 @@ import { generateGraphQLSchemaFromSelections } from "./lib/graphql/generateGraph
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
 import { generateAppConfigYaml } from "./lib/appConfig/configGenerator";
+import yaml from "js-yaml";
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
@@ -47,15 +48,19 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
     const text = await file.text();
-    let json;
+    let spec;
     try {
-      json = JSON.parse(text);
-    } catch (err) {
-      alert("Invalid JSON file");
-      return;
+      spec = JSON.parse(text);
+    } catch (jsonErr) {
+      try {
+        spec = yaml.load(text);
+      } catch (yamlErr) {
+        alert("Invalid OpenAPI file: must be valid JSON or YAML");
+        return;
+      }
     }
-    setOpenApi(json);
-    setOpenApiTree(parseOpenApiToTree(json));
+    setOpenApi(spec);
+    setOpenApiTree(parseOpenApiToTree(spec));
     setSelectedAttrs({});
   };
 

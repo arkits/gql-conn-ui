@@ -25,7 +25,16 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
       {parameters.length > 0 && (
         <Box mb={2}>
           <Text fontSize="xs" fontWeight="bold" color="gray.500">Parameters:</Text>
-          {/* ... parameter rendering ... */}
+          <Box pl={2}>
+            {parameters.map((param: any, idx: number) => (
+              <Box key={idx} display="flex" alignItems="center" fontSize="xs" mb={1}>
+                <Text as="span" fontWeight="bold" color="teal.300" minW="60px">{param.name}</Text>
+                <Text as="span" color="gray.400" ml={2} minW="40px">{param.in}</Text>
+                <Text as="span" color="purple.400" ml={2} minW="50px">{param.schema?.type || ''}</Text>
+                <Text as="span" color="gray.500" ml={2}>{param.description || ''}</Text>
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
       {requestBody && (
@@ -34,18 +43,26 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
           <Text fontSize="xs" pl={2}>{requestBody.description || 'No description'}</Text>
           {requestBody.content && (
             <Box pl={2}>
-              {Object.entries(requestBody.content).map(([type, content]: any, idx) => (
-                <Text fontSize="xs" key={idx}>
-                  <b>{type}</b>: {content.schema ? JSON.stringify(content.schema) : ''}
-                </Text>
-              ))}
+              {Object.entries(requestBody.content).map(([type, content]: any, idx) => {
+                let sample = null;
+                if (content.schema) {
+                  sample = generateSampleFromSchema(content.schema, openApi);
+                }
+                return sample ? (
+                  <Box key={idx}>
+                    <Box as="pre" fontSize="xs" bg={darkMode ? 'gray.800' : 'gray.100'} color={darkMode ? 'gray.100' : 'gray.800'} p={2} borderRadius="md" mt={1} maxW="400px" overflowX="auto">
+                      <JsonWithCheckboxes value={sample} path={[]} selected={{}} onToggle={() => {}} darkMode={darkMode} />
+                    </Box>
+                  </Box>
+                ) : null;
+              })}
             </Box>
           )}
         </Box>
       )}
       {successResponses.length > 0 && (
         <Box>
-          <Text fontSize="xs" fontWeight="bold" color="gray.500">Successful Responses:</Text>
+          <Text fontSize="xs" fontWeight="bold" color="gray.500">Responses:</Text>
           <Box pl={2}>
             {successResponses.map(([code, resp]: any, idx) => {
               const respObj = resp as any;
@@ -55,7 +72,6 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
                 let sample = null;
                 let typeName = null;
                 if (type.includes('json') && contentObj.schema) {
-                  // Generate a sample JSON for the schema
                   sample = generateSampleFromSchema(contentObj.schema, openApi);
                   if (contentObj.schema.$ref) {
                     typeName = contentObj.schema.$ref.replace('#/components/schemas/', '');
@@ -67,9 +83,7 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
                 }
                 return sample && typeName ? (
                   <Box key={j}>
-                    <Text fontSize="xs">
-                      <b>{type}</b>: {contentObj.schema ? JSON.stringify(contentObj.schema) : ''}
-                    </Text>
+                    {/* Hide the raw type/schema line */}
                     <Box as="pre" fontSize="xs" bg={darkMode ? 'gray.800' : 'gray.100'} color={darkMode ? 'gray.100' : 'gray.800'} p={2} borderRadius="md" mt={1} maxW="400px" overflowX="auto">
                       <JsonWithCheckboxes value={sample} path={[]} selected={isPlainObject(selectedAttrs[typeName]) ? selectedAttrs[typeName] : {}} onToggle={path => onAttrToggle(typeName, path)} darkMode={darkMode} />
                     </Box>

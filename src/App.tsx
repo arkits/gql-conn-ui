@@ -4,29 +4,10 @@ import { Sun, Moon } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
 import { generateGraphQLSchemaFromSelections } from "./graphql/generateGraphQL";
-
-// ErrorBoundary component (keep as is)
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: any, errorInfo: any) {}
-  render() {
-    if (this.state.hasError) {
-      return (
-        <Box p={6} color="red.500" bg="red.50">
-          <b>Something went wrong:</b>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{String(this.state.error)}</pre>
-        </Box>
-      );
-    }
-    return this.props.children;
-  }
-}
+import ErrorBoundary from "./components/ErrorBoundary";
+import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
+import yaml from "js-yaml";
+import { generateAppConfigYaml } from "./configGenerator";
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
@@ -38,6 +19,7 @@ function App() {
   const [openApiTree, setOpenApiTree] = useState<any[]>([]);
   const [graphqlSchema, setGraphqlSchema] = useState<string>("# GraphQL schema will appear here\n");
   const [selectedAttrs, setSelectedAttrs] = useState<Record<string, Record<string, boolean>>>({});
+  const [appConfigYaml, setAppConfigYaml] = useState<string>("# Application config YAML will appear here\n");
 
   // Handler for toggling attribute selection
   const handleAttrToggle = (typeName: string, path: string[]) => {
@@ -55,6 +37,10 @@ function App() {
     } else {
       setGraphqlSchema('# GraphQL schema will appear here\n');
     }
+
+    // --- Generate App Config YAML ---
+    setAppConfigYaml(generateAppConfigYaml(openApi, selectedAttrs));
+    // --- End App Config YAML ---
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAttrs, openApi]);
 
@@ -114,19 +100,58 @@ function App() {
               <Box color="gray.400">Upload an OpenAPI spec to visualize endpoints.</Box>
             )}
           </Box>
-          {/* Right: GraphQL Schema Editor */}
-          <Box flex="1" p={6} overflowY="hidden" bg={darkMode ? 'gray.900' : 'gray.50'} display="flex" flexDirection="column" minH={0} h="100%"> 
-            <Heading size="sm" mb={4} color="purple.600">GraphQL Schema</Heading>
-            <Box borderRadius="md" overflow="hidden" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex="1" minH={0} display="flex">
-              <MonacoEditor
-                height="100%"
-                width="100%"
-                defaultLanguage="graphql"
-                theme={darkMode ? "vs-dark" : "light"}
-                value={graphqlSchema}
-                options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true }}
-              />
-            </Box>
+          {/* Right: GraphQL Schema Editor with Tabs */}
+          <Box flex="1" p={6} overflowY="hidden" bg={darkMode ? 'gray.900' : 'gray.50'} display="flex" flexDirection="column" minH={0} h="100%">
+            <TabsRoot variant="enclosed" fitted defaultValue="schema">
+              <TabsList mb={4}>
+                <TabsTrigger value="schema"
+                  style={{
+                    color: darkMode ? '#F7FAFC' : '#1A202C',
+                    fontWeight: 600,
+                  }}
+                  _selected={{ color: darkMode ? '#63B3ED' : '#3182CE' }}
+                >
+                  GraphQL Schema
+                </TabsTrigger>
+                <TabsTrigger value="yaml"
+                  style={{
+                    color: darkMode ? '#F7FAFC' : '#1A202C',
+                    fontWeight: 600,
+                  }}
+                  _selected={{ color: darkMode ? '#63B3ED' : '#3182CE' }}
+                >
+                  App Config YAML
+                </TabsTrigger>
+              </TabsList>
+              <TabsContentGroup display="flex" flexDirection="column" flex={1} minH={0} h="100%">
+                <TabsContent value="schema" flex={1} minH={0} h="100%" display="flex" flexDirection="column">
+                  <Heading size="sm" mb={4} color="purple.600">GraphQL Schema</Heading>
+                  <Box borderRadius="md" overflow="hidden" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} display="flex" flexDirection="column">
+                    <MonacoEditor
+                      height="100%"
+                      width="100%"
+                      defaultLanguage="graphql"
+                      theme={darkMode ? "vs-dark" : "light"}
+                      value={graphqlSchema}
+                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true }}
+                    />
+                  </Box>
+                </TabsContent>
+                <TabsContent value="yaml" flex={1} minH={0} h="100%" display="flex" flexDirection="column">
+                  <Heading size="sm" mb={4} color="purple.600">App Config YAML</Heading>
+                  <Box borderRadius="md" overflow="hidden" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} display="flex" flexDirection="column">
+                    <MonacoEditor
+                      height="100%"
+                      width="100%"
+                      defaultLanguage="yaml"
+                      theme={darkMode ? "vs-dark" : "light"}
+                      value={appConfigYaml}
+                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true }}
+                    />
+                  </Box>
+                </TabsContent>
+              </TabsContentGroup>
+            </TabsRoot>
           </Box>
         </Flex>
       </Flex>

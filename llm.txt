@@ -15,3 +15,9 @@ remove the 'Use as GraphQL type' checkbox. if the user selects as attribute from
 also update the graphql code generation logic -- if the user selects a type/attribute from the openapi spec's json response body, generate an eqivalent graphql query. implement the logic to generate the graphql query based on the openapi spec and user selection. for example use the operation name or description from the openapi spec to name the graphql query. implement logic to generate comments in the graphql schema to better document the conversion / lineage from the openapi spec
 
 improve the overall quality of the code for this project. spilt into multiple files as needed. move the react components to a separate file/dir and create another file/dir for the graphql generation logic
+
+add to the graphql schema generation logic - when generating the graphql query based of the selected open api endpoint, use the openapi endpoint's request input params and generating equivalent params in the graphql query. support the path params, query params and json request inputs from the selected endpoint
+
+tweak graphql schema generation logic - support array responses. instead of generating a `_Scalar` type, have the query use an array of the selected type, eg `[Pet]` instead of `Pets_Scalar`
+
+add to the graphql schema generation logic - when generating the graphql query apply a custom directive to it `@dataSource()`. the directive accepts the following args - path, method, selection. The app should generte graphql schema that includes the relevant information for these args based on the openapi spec selection.

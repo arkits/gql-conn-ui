@@ -145,22 +145,40 @@ function App() {
           {/* Right: GraphQL Schema Editor with Tabs */}
           <Box flex="1" p={6} overflowY="hidden" bg={darkMode ? 'gray.900' : 'gray.50'} display="flex" flexDirection="column" minH={0} h="100%">
             <TabsRoot variant="enclosed" fitted defaultValue="schema">
-              <TabsList mb={4}>
+              <TabsList mb={4} bg={darkMode ? '#23232B' : '#EDF2F7'} borderRadius="md" boxShadow="sm" border="none" p={1}>
                 <TabsTrigger value="schema"
                   style={{
-                    color: darkMode ? '#F7FAFC' : '#1A202C',
+                    color: darkMode ? '#F1F1F1' : '#2D3748',
                     fontWeight: 600,
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    background: 'none',
                   }}
-                  _selected={{ color: darkMode ? '#63B3ED' : '#3182CE' }}
+                  _selected={{
+                    color: darkMode ? '#63B3ED' : '#2B6CB0',
+                    bg: darkMode ? '#18181B' : '#fff',
+                    boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
+                  }}
+                  borderRadius="md"
+                  px={6}
+                  py={2}
                 >
                   GraphQL Schema
                 </TabsTrigger>
                 <TabsTrigger value="yaml"
                   style={{
-                    color: darkMode ? '#F7FAFC' : '#1A202C',
+                    color: darkMode ? '#F1F1F1' : '#2D3748',
                     fontWeight: 600,
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    background: 'none',
                   }}
-                  _selected={{ color: darkMode ? '#63B3ED' : '#3182CE' }}
+                  _selected={{
+                    color: darkMode ? '#63B3ED' : '#2B6CB0',
+                    bg: darkMode ? '#18181B' : '#fff',
+                    boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
+                  }}
+                  borderRadius="md"
+                  px={6}
+                  py={2}
                 >
                   App Config YAML
                 </TabsTrigger>

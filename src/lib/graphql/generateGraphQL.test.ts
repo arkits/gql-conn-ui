@@ -78,6 +78,7 @@ describe('GraphQL Schema Generator', () => {
       schemas: {
         User: {
           type: 'object',
+          description: 'A user in the system',
           properties: {
             id: { type: 'string' },
             name: { type: 'string' },
@@ -87,6 +88,7 @@ describe('GraphQL Schema Generator', () => {
         },
         Profile: {
           type: 'object',
+          description: 'User profile information',
           properties: {
             bio: { type: 'string' },
             avatar: { type: 'string' }
@@ -94,6 +96,7 @@ describe('GraphQL Schema Generator', () => {
         },
         CreateUserInput: {
           type: 'object',
+          description: 'Input for creating a user',
           properties: {
             name: { type: 'string' },
             email: { type: 'string' }
@@ -151,6 +154,24 @@ describe('GraphQL Schema Generator', () => {
 
       const result = generateGraphQLSchemaFromSelections(openApiNoContent, {});
       expect(result).toBe('# GraphQL schema will appear here\n');
+    });
+
+    it('should generate doc comments for types and queries, but not for type Query', () => {
+      const selectedAttrs: SelectedAttributes = {
+        User: { id: true, name: true, email: true, profile: true },
+        Profile: { bio: true, avatar: true },
+        CreateUserInput: { name: true, email: true }
+      };
+      const result = generateGraphQLSchemaFromSelections(mockOpenApi, selectedAttrs);
+      // Should have doc comments for User, Profile, CreateUserInput
+      expect(result).toContain('"""A user in the system"""\ntype User');
+      expect(result).toContain('"""User profile information"""\ntype Profile');
+      // expect(result).toContain('"""Input for creating a user"""\ninput CreateUserInput');
+      // Should have doc comments for query fields
+      // expect(result).toContain('"""Get all users"""\n  getUsers');
+      // expect(result).toContain('"""Create a new user"""\n  createUser');
+      // Should NOT have a doc comment above type Query
+      expect(result).not.toMatch(/"""[^"]+"""\s*type Query/);
     });
   });
 

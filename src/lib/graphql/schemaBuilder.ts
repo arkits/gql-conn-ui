@@ -62,7 +62,7 @@ export function buildObjectType(
       }
     }
 
-    const gqlType = new GraphQLObjectType({ name, fields });
+    const gqlType = new GraphQLObjectType({ name, fields, description: schema.description });
     typeMaps.output[name] = gqlType;
     return gqlType;
   }

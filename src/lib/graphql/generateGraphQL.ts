@@ -23,7 +23,6 @@ export function generateGraphQLSchemaFromSelections(
   };
 
   const queryFields: GraphQLFieldConfigMap<any, any> = {};
-  const comments: string[] = [];
   const queryDirectives: Record<string, { path: string; method: string; selection: string[] }> = {};
 
   // Process all operations
@@ -39,8 +38,6 @@ export function generateGraphQLSchemaFromSelections(
           description: result.description
         };
         
-        const operationDetails = details as any;
-        comments.push(`# OpenAPI: ${result.directive.method} ${result.directive.path}\n# ${operationDetails.summary || operationDetails.description || ''}`);
         queryDirectives[result.operationId] = result.directive;
       }
     }
@@ -59,20 +56,15 @@ export function generateGraphQLSchemaFromSelections(
     query: QueryType
   });
 
-  return generateSchemaWithDirectives(schema, comments, queryDirectives);
+  return generateSchemaWithDirectives(schema, [], queryDirectives);
 }
 
 function generateSchemaWithDirectives(
   schema: GraphQLSchema,
-  comments: string[],
+  _comments: string[], // unused now
   queryDirectives: Record<string, { path: string; method: string; selection: string[] }>
 ): string {
   let sdl = printSchema(schema);
-
-  // Add comments at the top
-  if (comments.length > 0) {
-    sdl = comments.join('\n') + '\n' + sdl;
-  }
 
   // Add the @dataSource directive definition
   const directiveDef = 'directive @dataSource(path: String!, method: String!, selection: [String!]!) on FIELD_DEFINITION';

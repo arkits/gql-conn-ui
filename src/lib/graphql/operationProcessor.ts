@@ -93,6 +93,16 @@ function buildResponseType(
   return buildObjectType(typeName, schema, openApi, selectedAttrs, typeName, [], typeMaps) as any;
 }
 
+function sanitizeGraphQLName(name: string): string {
+  // GraphQL names must match /^[_a-zA-Z][_a-zA-Z0-9]*$/
+  // Replace invalid characters with underscores and ensure it doesn't start with a digit
+  let sanitized = name.replace(/[^_a-zA-Z0-9]/g, '_');
+  if (/^[0-9]/.test(sanitized)) {
+    sanitized = '_' + sanitized;
+  }
+  return sanitized;
+}
+
 function buildOperationArgs(
   parameters: any[],
   requestBody: any,
@@ -105,8 +115,9 @@ function buildOperationArgs(
   // Handle parameters
   for (const param of parameters) {
     if (!param.name || !param.in) continue;
-    args[param.name] = { 
-      type: mapParameterToGraphQLInput(param, openApi, typeMaps, param.name) 
+    const argName = sanitizeGraphQLName(param.name);
+    args[argName] = {
+      type: mapParameterToGraphQLInput(param, openApi, typeMaps, argName)
     };
   }
 

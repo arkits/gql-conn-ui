@@ -5,3 +5,13 @@ Install and use monaco editor for displaying the graphql schema or any code.
 Ensure that the UI closely matches the UI. 
 Use graphql library for Graphql related funcationality. Implement the logic to convert an OpenAPI spec to Graphql.
 implement the generation of the graphql schema. allow the user to pick types from the response body json. based on the selected types, generate the equivalent graphql type. use libraries to parse the openapi spec and graphql schema
+
+make the openapi spec visualizer tree view collapasable. collapasble by the endpoint, method. also update the visualizer to only show successful response body 
+
+update the openapi json response body visualizer's selector. allow the user to select individual elements from the json response body by displaying checkbox next to each attribute of the json response body. track the attributes selected. make sure to support hierchy. based on the selected attributes, generate the partial graphql type. 
+
+remove the 'Use as GraphQL type' checkbox. if the user selects as attribute from the json response body, assume the user wants to use it as a graphql type. 
+
+also update the graphql code generation logic -- if the user selects a type/attribute from the openapi spec's json response body, generate an eqivalent graphql query. implement the logic to generate the graphql query based on the openapi spec and user selection. for example use the operation name or description from the openapi spec to name the graphql query. implement logic to generate comments in the graphql schema to better document the conversion / lineage from the openapi spec
+
+improve the overall quality of the code for this project. spilt into multiple files as needed. move the react components to a separate file/dir and create another file/dir for the graphql generation logic

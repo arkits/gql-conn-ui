@@ -3,125 +3,43 @@ import { Box, Flex, Heading, HStack, Input, IconButton } from "@chakra-ui/react"
 import { Sun, Moon } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
-import { generateGraphQLSchemaFromSelections } from "./lib/graphql/generateGraphQL";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
-import { generateAppConfigYaml } from "./lib/appConfig/configGenerator";
-import yaml from "js-yaml";
+
+import { useFileUpload } from "./hooks/useFileUpload";
+import { useSelection } from "./hooks/useSelection";
+import { useGraphQLGeneration } from "./hooks/useGraphQLGeneration";
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);
+  
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "light";
   }, [darkMode]);
 
-  const [openApi, setOpenApi] = useState<any>(null);
-  const [openApiTree, setOpenApiTree] = useState<any[]>([]);
-  const [graphqlSchema, setGraphqlSchema] = useState<string>("# GraphQL schema will appear here\n");
-  const [selectedAttrs, setSelectedAttrs] = useState<Record<string, Record<string, boolean>>>({});
-  const [appConfigYaml, setAppConfigYaml] = useState<string>("# Application config YAML will appear here\n");
+  const { openApi, openApiTree, handleFileUpload } = useFileUpload();
+  const { selectedAttrs, handleAttrToggle, handleSelectAllAttrs, clearSelection } = useSelection();
+  const { graphqlSchema, appConfigYaml } = useGraphQLGeneration(openApi, selectedAttrs);
 
-  // Handler for toggling attribute selection
-  const handleAttrToggle = (typeName: string, path: string[]) => {
-    setSelectedAttrs(prev => {
-      const typeAttrs = { ...(prev[typeName] || {}) };
-      const key = path.join('.');
-      typeAttrs[key] = !typeAttrs[key];
-      return { ...prev, [typeName]: typeAttrs };
-    });
-  };
-
-  // Handler for selecting all attributes for a type
-  const handleSelectAllAttrs = (typeName: string, sample: any) => {
-    function collectPaths(obj: any, prefix: string[] = []): string[] {
-      if (typeof obj !== 'object' || obj === null) return [];
-      if (Array.isArray(obj)) {
-        return collectPaths(obj[0], [...prefix, '0']);
-      }
-      let paths: string[] = [];
-      for (const [key, val] of Object.entries(obj)) {
-        const currentPath = [...prefix, key];
-        paths.push(currentPath.join('.'));
-        if (typeof val === 'object' && val !== null) {
-          paths = paths.concat(collectPaths(val, currentPath));
-        }
-      }
-      return paths;
-    }
-    setSelectedAttrs(prev => {
-      const allPaths = collectPaths(sample);
-      const typeAttrs = prev[typeName] || {};
-      const allSelected = allPaths.every(path => typeAttrs[path]);
-      if (allSelected) {
-        // Deselect all
-        return { ...prev, [typeName]: {} };
-      } else {
-        // Select all
-        const newTypeAttrs: Record<string, boolean> = {};
-        allPaths.forEach(path => { newTypeAttrs[path] = true; });
-        return { ...prev, [typeName]: newTypeAttrs };
-      }
-    });
-  };
-
-  useEffect(() => {
-    if (openApi && Object.keys(selectedAttrs).some(typeName => Object.keys(selectedAttrs[typeName] || {}).length > 0)) {
-      setGraphqlSchema(generateGraphQLSchemaFromSelections(openApi, selectedAttrs));
+  const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const result = await handleFileUpload(e);
+    if (result.success) {
+      clearSelection();
     } else {
-      setGraphqlSchema('# GraphQL schema will appear here\n');
+      alert(result.error);
     }
-
-    // --- Generate App Config YAML ---
-    setAppConfigYaml(generateAppConfigYaml(openApi, selectedAttrs));
-    // --- End App Config YAML ---
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAttrs, openApi]);
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    let spec;
-    try {
-      spec = JSON.parse(text);
-    } catch (jsonErr) {
-      try {
-        spec = yaml.load(text);
-      } catch (yamlErr) {
-        alert("Invalid OpenAPI file: must be valid JSON or YAML");
-        return;
-      }
-    }
-    setOpenApi(spec);
-    setOpenApiTree(parseOpenApiToTree(spec));
-    setSelectedAttrs({});
   };
-
-  // Helper to parse OpenAPI and build a tree structure
-  function parseOpenApiToTree(openApi: any) {
-    if (!openApi?.paths) return [];
-    return Object.entries(openApi.paths).map(([path, methods]: any) => ({
-      path,
-      methods: Object.entries(methods)
-        .filter(([_, details]: any) => {
-          // Only include methods with a 2xx response that has a content property
-          const responses = details.responses || {};
-          return Object.entries(responses).some(
-            ([code, resp]: any) => /^2\d\d$/.test(code) && resp && resp.content
-          );
-        })
-        .map(([method, details]: any) => ({
-          method: method.toUpperCase(),
-          details,
-        })),
-    }))
-    // Also filter out paths with no methods left
-    .filter((node: any) => node.methods.length > 0);
-  }
 
   return (
     <ErrorBoundary>
-      <Flex direction="column" minH="100vh" minW="0" w="100vw" h="100vh" className={darkMode ? "dark" : "light"}>
+      <Flex 
+        direction="column" 
+        minH="100vh" 
+        minW="0" 
+        w="100vw" 
+        h="100vh" 
+        className={darkMode ? "dark" : "light"}
+      >
         {/* Header/Nav Bar */}
         <Flex
           as="header"
@@ -149,12 +67,16 @@ function App() {
           >
             <HStack gap={6} align="center">
               <Heading size="md" color="teal.400" letterSpacing="tight" fontWeight={700}>
-                OpenAPI <Box as="span" color={darkMode ? 'gray.400' : 'gray.600'} fontWeight={400} mx={1}>→</Box> GraphQL Converter
+                OpenAPI{" "}
+                <Box as="span" color={darkMode ? 'gray.400' : 'gray.600'} fontWeight={400} mx={1}>
+                  →
+                </Box>{" "}
+                GraphQL Converter
               </Heading>
               <Input
                 type="file"
                 accept=".json,.yaml,.yml"
-                onChange={handleFileUpload}
+                onChange={onFileUpload}
                 size="sm"
                 w="auto"
                 bg={darkMode ? 'gray.700' : 'gray.100'}
@@ -179,22 +101,61 @@ function App() {
             </IconButton>
           </Flex>
         </Flex>
+        
         {/* Main Content */}
         <Flex flex="1" overflow="hidden">
           {/* Left: OpenAPI Tree */}
-          <Box w="40%" minW="320px" maxW="600px" p={6} overflowY="auto" borderRight="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} bg={darkMode ? '#18181B' : 'white'}>
-            <Heading size="sm" mb={4} color="teal.600">OpenAPI Spec</Heading>
+          <Box 
+            w="40%" 
+            minW="320px" 
+            maxW="600px" 
+            p={6} 
+            overflowY="auto" 
+            borderRight="1px solid" 
+            borderColor={darkMode ? 'gray.700' : 'gray.200'} 
+            bg={darkMode ? '#18181B' : 'white'}
+          >
+            <Heading size="sm" mb={4} color="teal.600">
+              OpenAPI Spec
+            </Heading>
             {openApiTree.length > 0 ? (
-              <TreeView tree={openApiTree} openApi={openApi} darkMode={darkMode} selectedAttrs={selectedAttrs} onAttrToggle={handleAttrToggle} onSelectAllAttrs={handleSelectAllAttrs} />
+              <TreeView 
+                tree={openApiTree} 
+                openApi={openApi} 
+                darkMode={darkMode} 
+                selectedAttrs={selectedAttrs} 
+                onAttrToggle={handleAttrToggle} 
+                onSelectAllAttrs={handleSelectAllAttrs} 
+              />
             ) : (
-              <Box color="gray.400">Upload an OpenAPI spec to visualize endpoints.</Box>
+              <Box color="gray.400">
+                Upload an OpenAPI spec to visualize endpoints.
+              </Box>
             )}
           </Box>
+          
           {/* Right: GraphQL Schema Editor with Tabs */}
-          <Box flex="1" p={6} overflowY="hidden" bg={darkMode ? 'gray.900' : 'gray.50'} display="flex" flexDirection="column" minH={0} h="100%">
+          <Box 
+            flex="1" 
+            p={6} 
+            overflowY="hidden" 
+            bg={darkMode ? 'gray.900' : 'gray.50'} 
+            display="flex" 
+            flexDirection="column" 
+            minH={0} 
+            h="100%"
+          >
             <TabsRoot variant="enclosed" fitted defaultValue="schema">
-              <TabsList mb={4} bg={darkMode ? '#23232B' : '#EDF2F7'} borderRadius="md" boxShadow="sm" border="none" p={1}>
-                <TabsTrigger value="schema"
+              <TabsList 
+                mb={4} 
+                bg={darkMode ? '#23232B' : '#EDF2F7'} 
+                borderRadius="md" 
+                boxShadow="sm" 
+                border="none" 
+                p={1}
+              >
+                <TabsTrigger 
+                  value="schema"
                   style={{
                     color: darkMode ? '#F1F1F1' : '#2D3748',
                     fontWeight: 600,
@@ -213,7 +174,8 @@ function App() {
                 >
                   GraphQL Schema
                 </TabsTrigger>
-                <TabsTrigger value="yaml"
+                <TabsTrigger 
+                  value="yaml"
                   style={{
                     color: darkMode ? '#F1F1F1' : '#2D3748',
                     fontWeight: 600,
@@ -233,30 +195,82 @@ function App() {
                   App Config YAML
                 </TabsTrigger>
               </TabsList>
+              
               <TabsContentGroup display="flex" flexDirection="column" flex={1} minH={0} h="100%">
-                <TabsContent value="schema" flex={1} minH={0} h="100%" display="flex" flexDirection="column">
-                  <Heading size="sm" mb={4} color="purple.600">GraphQL Schema</Heading>
-                  <Box borderRadius="md" overflow="auto" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} minH={0} h="100%" display="flex" flexDirection="column">
+                <TabsContent 
+                  value="schema" 
+                  flex={1} 
+                  minH={0} 
+                  h="100%" 
+                  display="flex" 
+                  flexDirection="column"
+                >
+                  <Heading size="sm" mb={4} color="purple.600">
+                    GraphQL Schema
+                  </Heading>
+                  <Box 
+                    borderRadius="md" 
+                    overflow="auto" 
+                    boxShadow="md" 
+                    border="1px solid" 
+                    borderColor={darkMode ? 'gray.700' : 'gray.200'} 
+                    flex={1} 
+                    minH={0} 
+                    h="100%" 
+                    display="flex" 
+                    flexDirection="column"
+                  >
                     <MonacoEditor
                       height="100%"
                       width="100%"
                       defaultLanguage="graphql"
                       theme={darkMode ? "vs-dark" : "light"}
                       value={graphqlSchema}
-                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: true, automaticLayout: true }}
+                      options={{ 
+                        readOnly: true, 
+                        minimap: { enabled: false }, 
+                        scrollBeyondLastLine: true, 
+                        automaticLayout: true 
+                      }}
                     />
                   </Box>
                 </TabsContent>
-                <TabsContent value="yaml" flex={1} minH={0} h="100%" display="flex" flexDirection="column">
-                  <Heading size="sm" mb={4} color="purple.600">App Config YAML</Heading>
-                  <Box borderRadius="md" overflow="auto" boxShadow="md" border="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} flex={1} minH={0} h="100%" display="flex" flexDirection="column">
+                
+                <TabsContent 
+                  value="yaml" 
+                  flex={1} 
+                  minH={0} 
+                  h="100%" 
+                  display="flex" 
+                  flexDirection="column"
+                >
+                  <Heading size="sm" mb={4} color="purple.600">
+                    App Config YAML
+                  </Heading>
+                  <Box 
+                    borderRadius="md" 
+                    overflow="auto" 
+                    boxShadow="md" 
+                    border="1px solid" 
+                    borderColor={darkMode ? 'gray.700' : 'gray.200'} 
+                    flex={1} 
+                    minH={0} 
+                    h="100%" 
+                    display="flex" 
+                    flexDirection="column"
+                  >
                     <MonacoEditor
                       height="100%"
                       width="100%"
                       defaultLanguage="yaml"
                       theme={darkMode ? "vs-dark" : "light"}
                       value={appConfigYaml}
-                      options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: true, automaticLayout: true }}
+                      options={{ 
+                        readOnly: true, 
+                        minimap: { enabled: false }, 
+                        scrollBeyondLastLine: true, 
+                        automaticLayout: true 
+                      }}
                     />
                   </Box>
                 </TabsContent>

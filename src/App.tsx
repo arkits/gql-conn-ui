@@ -157,6 +157,7 @@ function App() {
                     fontWeight: 600,
                     fontFamily: 'Inter, system-ui, sans-serif',
                     background: 'none',
+                    fontSize: '0.875rem',
                   }}
                   _selected={{
                     color: darkMode ? '#63B3ED' : '#2B6CB0',
@@ -164,8 +165,8 @@ function App() {
                     boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
                   }}
                   borderRadius="md"
-                  px={6}
-                  py={2}
+                  px={3}
+                  py={1}
                 >
                   GraphQL Schema
                 </TabsTrigger>
@@ -175,6 +176,7 @@ function App() {
                     fontWeight: 600,
                     fontFamily: 'Inter, system-ui, sans-serif',
                     background: 'none',
+                    fontSize: '0.875rem',
                   }}
                   _selected={{
                     color: darkMode ? '#63B3ED' : '#2B6CB0',
@@ -182,8 +184,8 @@ function App() {
                     boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
                   }}
                   borderRadius="md"
-                  px={6}
-                  py={2}
+                  px={3}
+                  py={1}
                 >
                   App Config YAML
                 </TabsTrigger>

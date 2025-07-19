@@ -3,11 +3,10 @@ import { Box, Flex, Heading, HStack, Input, IconButton } from "@chakra-ui/react"
 import { Sun, Moon } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
-import { generateGraphQLSchemaFromSelections } from "./graphql/generateGraphQL";
+import { generateGraphQLSchemaFromSelections } from "./lib/graphql/generateGraphQL";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
-import yaml from "js-yaml";
-import { generateAppConfigYaml } from "./configGenerator";
+import { generateAppConfigYaml } from "./lib/appConfig/configGenerator";
 
 function App() {
   const [darkMode, setDarkMode] = useState(true);

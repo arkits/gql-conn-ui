@@ -8,11 +8,3 @@ html, body, #root {
   min-height: 0;
 }
 
-body {
-  background: #f7fafc;
-}
-
-/* Remove Vite/React logo styles */
-.logo, .logo.react, .read-the-docs, .card {
-  display: none !important;
-}

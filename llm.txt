@@ -21,3 +21,44 @@ add to the graphql schema generation logic - when generating the graphql query b
 tweak graphql schema generation logic - support array responses. instead of generating a `_Scalar` type, have the query use an array of the selected type, eg `[Pet]` instead of `Pets_Scalar`
 
 add to the graphql schema generation logic - when generating the graphql query apply a custom directive to it `@dataSource()`. the directive accepts the following args - path, method, selection. The app should generte graphql schema that includes the relevant information for these args based on the openapi spec selection.
+
+
+
+This is a React app that allows users to supply an OpenAPI spec file and converts it to a GraphQL schema. The UI consists of 2 page full page columns. Left column visualizes the OpenAPI spec, displaying the method, path, request, responses, in a tree view. if the user selects a type/attribute from the openapi spec's json response body, generate an eqivalent graphql query and types.
+
+there is a bug in the graphql schema generation logic. when selecting attribute types from the openapi response body, if the attribute is of `type: array`, the child attributes of the type are not being included in the generate graphql schema.
+
+eg a type Pet with attribute of tags which is an array of Tag. when selecting Tag's children such as id and name, they are not seen in the graphql schema. only a empty `type Tag`. attached screenshot. expected to see
+
+```
+type Tag {
+   id: Int
+   name: String
+}
+```
+
+in the logs,  the Tag type is added to enrichedSelectedAttrs, but not its children. 
+
+```
+enrichedSelectedAttrs after enrichment: {
+  "Pet": {
+    "id": true,
+    "category": true,
+    "category.id": true,
+    "category.name": true,
+    "name": true,
+    "photoUrls": true,
+    "tags": true,
+    "tags.0.id": true,
+    "tags.0.name": true,
+    "status": true
+  },
+  "Category": {
+    "id": true,
+    "name": true
+  },
+  "Tag": {}
+}
+```
+
+fix this bug please!

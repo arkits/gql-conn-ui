@@ -191,12 +191,55 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
   // --- PATCH START: Preprocess selectedAttrs for nested types ---
   // Deep copy to avoid mutating input
   const enrichedSelectedAttrs: Record<string, Record<string, boolean>> = JSON.parse(JSON.stringify(selectedAttrs));
+  console.log("selectedAttrs", selectedAttrs)
+
   // --- PATCH START: Robust handling for object and array references ---
-  function addSelectedAttrForReference(schema: any, pathSegments: string[], enrichedSelectedAttrs: Record<string, Record<string, boolean>>) {
+  function addSelectedAttrForReference(schema: any, pathSegments: string[], enrichedSelectedAttrs: Record<string, Record<string, boolean>>, openApi: any, currentTypeName?: string) {
     if (!schema || pathSegments.length === 0) return;
     const [field, ...rest] = pathSegments;
     let nextSchema = null;
-    let nextTypeName = null;
+    let nextTypeName = currentTypeName;
+    // --- PATCH: Skip array index '0' and apply rest to item type ---
+    if (field === '0') {
+      // If schema.items is a $ref, add the next segment to the referenced type
+      if (schema.items && schema.items.$ref) {
+        const refType = schema.items.$ref.replace('#/components/schemas/', '');
+        if (rest.length > 0) {
+          const [nextField, ...nextRest] = rest;
+          if (!refType) return;
+          if (!enrichedSelectedAttrs[refType]) enrichedSelectedAttrs[refType] = {};
+          if (nextField) {
+            // If this is the last segment, add it directly
+            if (nextRest.length === 0) {
+              enrichedSelectedAttrs[refType][nextField] = true;
+              console.log('Directly adding leaf', nextField, 'to', refType, 'in enrichedSelectedAttrs');
+            } else {
+              // Otherwise, recurse
+              const refSchema = openApi?.components?.schemas?.[refType];
+              if (refSchema) {
+                addSelectedAttrForReference(refSchema, [nextField, ...nextRest], enrichedSelectedAttrs, openApi, refType);
+              }
+            }
+          }
+        }
+        return;
+      }
+      // Otherwise, just recurse into items with the item type name
+      let itemTypeName = currentTypeName;
+      if (schema.items && schema.items.$ref) {
+        itemTypeName = schema.items.$ref.replace('#/components/schemas/', '');
+      }
+      addSelectedAttrForReference(schema.items, rest, enrichedSelectedAttrs, openApi, itemTypeName);
+      return;
+    }
+    // If we are at a leaf property of an object, add it directly
+    if (pathSegments.length === 1 && schema.properties && schema.properties[field]) {
+      if (!currentTypeName) return;
+      if (!enrichedSelectedAttrs[currentTypeName]) enrichedSelectedAttrs[currentTypeName] = {};
+      enrichedSelectedAttrs[currentTypeName][field] = true;
+      console.log('Directly adding leaf', field, 'to', currentTypeName, 'in enrichedSelectedAttrs (object property)');
+      return;
+    }
     // Step into the field if it exists
     if (schema.properties && schema.properties[field]) {
       nextSchema = schema.properties[field];
@@ -204,31 +247,59 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
       if (nextSchema.$ref) {
         nextTypeName = nextSchema.$ref.replace('#/components/schemas/', '');
         if (rest.length > 0) {
+          if (!nextTypeName) return;
           if (!enrichedSelectedAttrs[nextTypeName]) enrichedSelectedAttrs[nextTypeName] = {};
-          enrichedSelectedAttrs[nextTypeName][rest.join('.')] = true;
+          // If this is the last segment, add it directly
+          if (rest.length === 1) {
+            enrichedSelectedAttrs[nextTypeName][rest[0]] = true;
+            console.log('Directly adding leaf', rest[0], 'to', nextTypeName, 'in enrichedSelectedAttrs');
+          } else {
+            // Otherwise, recurse
+            const refSchema = openApi?.components?.schemas?.[nextTypeName];
+            if (refSchema) {
+              addSelectedAttrForReference(refSchema, rest, enrichedSelectedAttrs, openApi, nextTypeName);
+            }
+          }
         }
         return;
       }
       // If it's an array of $ref (array reference)
       if (nextSchema.type === 'array' && nextSchema.items && nextSchema.items.$ref) {
         nextTypeName = nextSchema.items.$ref.replace('#/components/schemas/', '');
-        // Only add the next segment (e.g., for tags.id, add 'id' to Tag)
         if (rest.length > 0) {
           const [arrayField, ...arrayRest] = rest;
+          if (!nextTypeName) return;
           if (!enrichedSelectedAttrs[nextTypeName]) enrichedSelectedAttrs[nextTypeName] = {};
           if (arrayField) {
-            enrichedSelectedAttrs[nextTypeName][arrayField] = true;
-          }
-          // If there is deeper nesting, support it (e.g., tags.subfield.id)
-          if (arrayRest.length > 0) {
-            addSelectedAttrForReference(nextSchema.items, arrayRest, enrichedSelectedAttrs);
+            // If this is the array index '0', skip it and process the rest for the referenced type
+            if (arrayField === '0') {
+              console.log('Skipping array index 0 for', nextTypeName, ', processing rest:', arrayRest);
+              // Get the referenced schema and recurse
+              const refSchema = openApi?.components?.schemas?.[nextTypeName];
+              if (refSchema && arrayRest.length > 0) {
+                addSelectedAttrForReference(refSchema, arrayRest, enrichedSelectedAttrs, openApi, nextTypeName);
+              }
+              return;
+            }
+            // If this is the last segment, add it directly
+            else if (arrayRest.length === 0) {
+              enrichedSelectedAttrs[nextTypeName][arrayField] = true;
+              console.log('Directly adding leaf', arrayField, 'to', nextTypeName, 'in enrichedSelectedAttrs');
+            } else {
+              // Otherwise, recurse
+              const refSchema = openApi?.components?.schemas?.[nextTypeName];
+              if (refSchema) {
+                addSelectedAttrForReference(refSchema, [arrayField, ...arrayRest], enrichedSelectedAttrs, openApi, nextTypeName);
+              }
+            }
           }
         }
         return;
       }
       // If it's a plain object, keep walking
       if (rest.length > 0) {
-        addSelectedAttrForReference(nextSchema, rest, enrichedSelectedAttrs);
+        if (!currentTypeName) return;
+        addSelectedAttrForReference(nextSchema, rest, enrichedSelectedAttrs, openApi, currentTypeName);
       }
     }
     // If the root schema is an array
@@ -238,18 +309,32 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
         nextTypeName = nextSchema.$ref.replace('#/components/schemas/', '');
         if (rest.length > 0) {
           const [arrayField, ...arrayRest] = rest;
+          if (!nextTypeName) return;
           if (!enrichedSelectedAttrs[nextTypeName]) enrichedSelectedAttrs[nextTypeName] = {};
           if (arrayField) {
-            enrichedSelectedAttrs[nextTypeName][arrayField] = true;
-          }
-          if (arrayRest.length > 0) {
-            addSelectedAttrForReference(nextSchema, arrayRest, enrichedSelectedAttrs);
+            // If this is the last segment, add it directly
+            if (arrayRest.length === 0) {
+              enrichedSelectedAttrs[nextTypeName][arrayField] = true;
+              console.log('Directly adding leaf', arrayField, 'to', nextTypeName, 'in enrichedSelectedAttrs');
+            } else if (arrayField === '0') {
+              // Debug log for array index skip at root array
+              console.log('Skipping root array index 0, passing rest to item type:', arrayRest);
+              addSelectedAttrForReference(nextSchema, arrayRest, enrichedSelectedAttrs, openApi, nextTypeName);
+              return;
+            } else {
+              // Otherwise, recurse
+              const refSchema = openApi?.components?.schemas?.[nextTypeName];
+              if (refSchema) {
+                addSelectedAttrForReference(refSchema, [arrayField, ...arrayRest], enrichedSelectedAttrs, openApi, nextTypeName);
+              }
+            }
           }
         }
         return;
       }
       if (rest.length > 0) {
-        addSelectedAttrForReference(nextSchema, rest, enrichedSelectedAttrs);
+        if (!currentTypeName) return;
+        addSelectedAttrForReference(nextSchema, rest, enrichedSelectedAttrs, openApi, currentTypeName);
       }
     }
   }
@@ -259,10 +344,25 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
     for (const attrPath of Object.keys(attrs)) {
       if (attrPath.includes('.')) {
         const pathSegments = attrPath.split('.');
-        addSelectedAttrForReference(schema, pathSegments, enrichedSelectedAttrs);
+        addSelectedAttrForReference(schema, pathSegments, enrichedSelectedAttrs, openApi, typeName);
       }
     }
   }
+  // --- DEBUG: Print enrichedSelectedAttrs after enrichment ---
+  console.log('enrichedSelectedAttrs after enrichment:', JSON.stringify(enrichedSelectedAttrs, null, 2));
+
+  // --- PATCH: Merge all children for each type in enrichedSelectedAttrs ---
+  // For each type, if any child is selected via dotted path, ensure all are merged
+  const mergedAttrs: Record<string, Record<string, boolean>> = {};
+  for (const [typeName, attrs] of Object.entries(enrichedSelectedAttrs)) {
+    if (!mergedAttrs[typeName]) mergedAttrs[typeName] = {};
+    for (const key of Object.keys(attrs)) {
+      mergedAttrs[typeName][key] = true;
+    }
+  }
+  // --- DEBUG: Print mergedAttrs before schema generation ---
+  console.log('mergedAttrs before schema generation:', JSON.stringify(mergedAttrs, null, 2));
+  // Use mergedAttrs for the rest of the function
   // --- PATCH END ---
 
   const typeMap: Record<string, GraphQLObjectType> = {};
@@ -294,7 +394,7 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
         } else {
           typeName = 'Type_' + code;
         }
-        const selected = enrichedSelectedAttrs[typeName];
+        const selected = mergedAttrs[typeName];
         if (selected && Object.keys(selected).length > 0) {
           // Build the GraphQL type (handle array response)
           let gqlType: GraphQLOutputType;
@@ -303,9 +403,9 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
             if (hasRef(contentObj.schema.items as unknown)) {
               itemTypeName = (contentObj.schema.items as any)['$ref'].replace('#/components/schemas/', '');
             }
-            gqlType = new GraphQLList(buildGraphQLType(itemTypeName, contentObj.schema.items, openApi, enrichedSelectedAttrs, itemTypeName, [], typeMap) as GraphQLObjectType);
+            gqlType = new GraphQLList(buildGraphQLType(itemTypeName, contentObj.schema.items, openApi, mergedAttrs, itemTypeName, [], typeMap) as GraphQLObjectType);
           } else {
-            gqlType = buildGraphQLType(typeName, contentObj.schema, openApi, enrichedSelectedAttrs, typeName, [], typeMap) as GraphQLObjectType;
+            gqlType = buildGraphQLType(typeName, contentObj.schema, openApi, mergedAttrs, typeName, [], typeMap) as GraphQLObjectType;
           }
 
           // Build GraphQL arguments from OpenAPI params
@@ -403,4 +503,4 @@ export function generateGraphQLSchemaFromSelections(openApi: any, selectedAttrs:
   });
 
   return sdl;
-} 
+} // End of generateGraphQLSchemaFromSelections

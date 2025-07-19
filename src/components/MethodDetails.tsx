@@ -44,7 +44,7 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
           <Text fontSize="xs" pl={2}>{requestBody.description || 'No description'}</Text>
           {requestBody.content && (
             <Box pl={2}>
-              {Object.entries(requestBody.content).map(([type, content]: any, idx) => {
+              {Object.entries(requestBody.content).map(([_type, content]: any, idx) => {
                 let sample = null;
                 if (content.schema) {
                   sample = generateSampleFromSchema(content.schema, openApi);
@@ -65,7 +65,7 @@ export const MethodDetails: React.FC<MethodDetailsProps> = ({ details, openApi, 
         <Box>
           <Text fontSize="xs" fontWeight="bold" color="gray.500">Responses:</Text>
           <Box pl={2}>
-            {successResponses.map(([code, resp]: any, idx) => {
+            {successResponses.map(([code, resp]: any, _idx) => {
               const respObj = resp as any;
               if (!respObj.content) return null;
               return Object.entries(respObj.content as any).map(([type, content]: any, j) => {

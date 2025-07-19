@@ -25,9 +25,15 @@ export function parseOpenApiToTree(openApi: OpenAPISpec): TreeNode[] {
 export function collectPaths(obj: any, prefix: string[] = []): string[] {
   if (typeof obj !== 'object' || obj === null) return [];
   if (Array.isArray(obj)) {
-    return collectPaths(obj[0], [...prefix, '0']);
+    // Add the array index path itself
+    const arrayPath = [...prefix, '0'].join('.');
+    let paths: string[] = [arrayPath];
+    // Recurse into the first element if it exists
+    if (obj.length > 0) {
+      paths = paths.concat(collectPaths(obj[0], [...prefix, '0']));
+    }
+    return paths;
   }
-  
   let paths: string[] = [];
   for (const [key, val] of Object.entries(obj)) {
     const currentPath = [...prefix, key];

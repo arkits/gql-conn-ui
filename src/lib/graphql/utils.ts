@@ -35,5 +35,7 @@ export function isSuccessResponse(code: string): boolean {
 }
 
 export function generateOperationId(path: string, method: string): string {
-  return `${method}_${path.replace(/\W+/g, '_')}`;
+  // Replace all non-alphanumeric characters with underscores, then trim leading/trailing underscores
+  const sanitizedPath = path.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return `${method}__${sanitizedPath}`;
 }

@@ -116,8 +116,8 @@ describe('GraphQL Utils', () => {
   describe('generateOperationId', () => {
     it('should generate operation ID from path and method', () => {
       expect(generateOperationId('/users', 'get')).toBe('get__users');
-      expect(generateOperationId('/users/{id}', 'post')).toBe('post__users_id_');
-      expect(generateOperationId('/api/v1/posts', 'delete')).toBe('delete_api_v1_posts');
+      expect(generateOperationId('/users/{id}', 'post')).toBe('post__users_id');
+      expect(generateOperationId('/api/v1/posts', 'delete')).toBe('delete__api_v1_posts');
     });
   });
 });

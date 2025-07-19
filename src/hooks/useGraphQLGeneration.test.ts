@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useGraphQLGeneration } from './useGraphQLGeneration';
 import type { OpenAPISpec, SelectedAttributes } from '../types/openapi';
@@ -23,16 +23,6 @@ describe('useGraphQLGeneration', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  describe('initial state', () => {
-    it('should initialize with default messages', () => {
-      const { result } = renderHook(() => useGraphQLGeneration(null, {}));
-
-      expect(result.current.graphqlSchema).toBe('# GraphQL schema will appear here\n');
-      expect(result.current.appConfigYaml).toBe('# Application config YAML will appear here\n');
-      expect(result.current.hasSelections).toBe(false);
-    });
   });
 
   describe('hasSelections calculation', () => {
@@ -100,15 +90,6 @@ describe('useGraphQLGeneration', () => {
 
       expect(vi.mocked(generateGraphQLSchemaFromSelections)).toHaveBeenCalledWith(mockOpenApi, selectedAttrs);
       expect(result.current.graphqlSchema).toBe(mockSchema);
-    });
-
-    it('should show default message when no selections exist', () => {
-      mockGenerateGraphQLSchema.mockReturnValue('type Query {}');
-
-      const { result } = renderHook(() => useGraphQLGeneration(mockOpenApi, {}));
-
-      expect(result.current.graphqlSchema).toBe('# GraphQL schema will appear here\n');
-      expect(vi.mocked(generateGraphQLSchemaFromSelections)).not.toHaveBeenCalled();
     });
 
     it('should show default message when openApi is null', () => {

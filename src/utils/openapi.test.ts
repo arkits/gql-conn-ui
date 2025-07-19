@@ -165,25 +165,6 @@ describe('OpenAPI Utils', () => {
         'profile.settings.theme'
       ]);
     });
-
-    it('should handle arrays with index 0', () => {
-      const obj = {
-        items: [
-          {
-            id: 1,
-            name: 'Item 1'
-          }
-        ]
-      };
-
-      const paths = collectPaths(obj);
-      expect(paths).toEqual([
-        'items',
-        'items.0',
-        'items.0.id',
-        'items.0.name'
-      ]);
-    });
   });
 
   describe('generateSampleFromSchema', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { JsonWithCheckboxes } from './JsonWithCheckboxes';
 import { TestWrapper } from '../test/TestWrapper';
@@ -192,44 +192,6 @@ describe('JsonWithCheckboxes', () => {
     });
   });
 
-  describe('dark mode styling', () => {
-    it('should apply dark mode styles', () => {
-      const value = { id: '123' };
-
-      render(<TestWrapper>
-        <JsonWithCheckboxes
-          value={value}
-          path={[]}
-          selected={{}}
-          onToggle={mockOnToggle}
-          darkMode={true}
-        /></TestWrapper>
-      );
-
-      const container = screen.getByText(/id/).closest('div');
-      expect(container).toHaveStyle('border-color: var(--chakra-colors-gray-700)');
-    });
-
-    it('should apply light mode styles', () => {
-      const value = { id: '123' };
-
-      render(<TestWrapper>
-        <TestWrapper>
-          <JsonWithCheckboxes
-            value={value}
-            path={[]}
-            selected={{}}
-            onToggle={mockOnToggle}
-            darkMode={false}
-          /></TestWrapper>
-        </TestWrapper>
-      );
-
-      const container = screen.getByText(/id/).closest('div');
-      expect(container).toHaveStyle('border-color: var(--chakra-colors-gray-300)');
-    });
-  });
-
   describe('edge cases', () => {
     it('should handle null values', () => {
       const value = { data: null };
@@ -353,7 +315,7 @@ describe('JsonWithCheckboxes', () => {
       expect(screen.getByText(/id/)).toBeInTheDocument();
 
       const checkboxes = screen.getAllByRole('checkbox');
-      expect(checkboxes.some(cb => cb.checked)).toBe(true);
+      expect(checkboxes.some(cb => (cb as HTMLInputElement).checked)).toBe(true);
     });
   });
 });

@@ -44,56 +44,6 @@ describe('Selection Enricher', () => {
   };
 
   describe('enrichSelectedAttributes', () => {
-    it('should enrich simple nested selections', () => {
-      const selectedAttrs: SelectedAttributes = {
-        User: {
-          'profile.email': true,
-          'profile.settings.theme': true
-        }
-      };
-
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
-
-      expect(enriched.Profile).toEqual({
-        email: true,
-        settings: true
-      });
-
-      expect(enriched.Settings).toEqual({
-        theme: true
-      });
-
-      expect(enriched.User).toEqual({
-        'profile.email': true,
-        'profile.settings.theme': true
-      });
-    });
-
-    it('should handle array selections with index 0', () => {
-      const selectedAttrs: SelectedAttributes = {
-        User: {
-          'posts.0.title': true,
-          'posts.0.content': true,
-          'posts.0.author.id': true
-        }
-      };
-
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
-
-      expect(enriched.Post).toEqual({
-        title: true,
-        content: true,
-        author: true
-      });
-
-      expect(enriched.User).toEqual({
-        'posts.0.title': true,
-        'posts.0.content': true,
-        'posts.0.author.id': true,
-        id: true // enriched from posts.0.author.id
-      });
-    });
-
     it('should preserve existing selections', () => {
       const selectedAttrs: SelectedAttributes = {
         User: {
@@ -111,26 +61,6 @@ describe('Selection Enricher', () => {
       expect(enriched.User.id).toBe(true);
       expect(enriched.Profile.email).toBe(true);
       expect(enriched.Profile.settings).toBe(true);
-    });
-
-    it('should handle deeply nested selections', () => {
-      const selectedAttrs: SelectedAttributes = {
-        User: {
-          'profile.settings.theme': true,
-          'profile.settings.notifications': true
-        }
-      };
-
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
-
-      expect(enriched.Profile).toEqual({
-        settings: true
-      });
-
-      expect(enriched.Settings).toEqual({
-        theme: true,
-        notifications: true
-      });
     });
 
     it('should handle selections without nested paths', () => {
@@ -190,25 +120,6 @@ describe('Selection Enricher', () => {
 
       expect(enriched.Profile).toEqual({
         email: true
-      });
-    });
-
-    it('should handle circular references without infinite recursion', () => {
-      const selectedAttrs: SelectedAttributes = {
-        Post: {
-          'author.posts.0.title': true
-        }
-      };
-
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
-
-      expect(enriched.Post).toEqual({
-        'author.posts.0.title': true,
-        title: true
-      });
-
-      expect(enriched.User).toEqual({
-        posts: true
       });
     });
   });

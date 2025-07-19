@@ -74,24 +74,67 @@ function App() {
   return (
     <ErrorBoundary>
       <Flex direction="column" minH="100vh" minW="0" w="100vw" h="100vh" className={darkMode ? "dark" : "light"}>
-        {/* Header */}
-        <Flex as="header" align="center" justify="space-between" px={6} py={4} bg={darkMode ? 'gray.800' : 'white'} boxShadow="sm">
-          <HStack gap={4}>
-            <Heading size="md" color="teal.500">OpenAPI → GraphQL Converter</Heading>
-            <Input type="file" accept=".json,.yaml,.yml" onChange={handleFileUpload} size="sm" w="auto" />
-          </HStack>
-          <IconButton
-            aria-label="Toggle dark mode"
-            onClick={() => setDarkMode((d) => !d)}
-            variant="ghost"
+        {/* Header/Nav Bar */}
+        <Flex
+          as="header"
+          align="center"
+          justify="center"
+          px={0}
+          py={0}
+          bg={darkMode ? 'gray.900' : 'white'}
+          boxShadow="sm"
+          borderBottomWidth="1px"
+          borderColor={darkMode ? 'gray.700' : 'gray.200'}
+        >
+          <Flex
+            w="100%"
+            maxW="1200px"
+            align="center"
+            justify="space-between"
+            px={{ base: 4, md: 8 }}
+            py={2}
+            borderRadius="xl"
+            bg={darkMode ? 'gray.800' : 'gray.50'}
+            boxShadow="md"
+            mt={3}
+            mb={3}
           >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </IconButton>
+            <HStack gap={6} align="center">
+              <Heading size="md" color="teal.400" letterSpacing="tight" fontWeight={700}>
+                OpenAPI <Box as="span" color={darkMode ? 'gray.400' : 'gray.600'} fontWeight={400} mx={1}>→</Box> GraphQL Converter
+              </Heading>
+              <Input
+                type="file"
+                accept=".json,.yaml,.yml"
+                onChange={handleFileUpload}
+                size="sm"
+                w="auto"
+                bg={darkMode ? 'gray.700' : 'gray.100'}
+                borderRadius="md"
+                _hover={{ bg: darkMode ? 'gray.600' : 'gray.200' }}
+                _focus={{ borderColor: 'teal.400' }}
+                fontSize="sm"
+                color={darkMode ? 'gray.100' : 'gray.800'}
+                p={1}
+              />
+            </HStack>
+            <IconButton
+              aria-label="Toggle dark mode"
+              onClick={() => setDarkMode((d) => !d)}
+              variant="ghost"
+              size="md"
+              color={darkMode ? 'yellow.300' : 'gray.700'}
+              _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
+              ml={2}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </IconButton>
+          </Flex>
         </Flex>
         {/* Main Content */}
         <Flex flex="1" overflow="hidden">
           {/* Left: OpenAPI Tree */}
-          <Box w="40%" minW="320px" maxW="600px" p={6} overflowY="auto" borderRight="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} bg={darkMode ? 'gray.800' : 'white'}>
+          <Box w="40%" minW="320px" maxW="600px" p={6} overflowY="auto" borderRight="1px solid" borderColor={darkMode ? 'gray.700' : 'gray.200'} bg={darkMode ? '#18181B' : 'white'}>
             <Heading size="sm" mb={4} color="teal.600">OpenAPI Spec</Heading>
             {openApiTree.length > 0 ? (
               <TreeView tree={openApiTree} openApi={openApi} darkMode={darkMode} selectedAttrs={selectedAttrs} onAttrToggle={handleAttrToggle} />

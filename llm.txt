@@ -1,0 +1,7 @@
+Build a UI that closely matches the attached screenshot. This is a React app that allows users to supply an OpenAPI spec file and converts it to a GraphQL schema. The UI consists of 2 page full page columns. Left column visualizes the OpenAPI spec, displaying the method, path, request, responses, in a tree view. The  Right column displays the generated GraphQL schema in a code editor. The UI has also has a top header bar
+A react project has already been initialized, replace the App.tsx and default styles as needed.
+Install and Use Chakra UI for UI compents. 
+Install and use monaco editor for displaying the graphql schema or any code.
+Ensure that the UI closely matches the UI. 
+Use graphql library for Graphql related funcationality. Implement the logic to convert an OpenAPI spec to Graphql.
+implement the generation of the graphql schema. allow the user to pick types from the response body json. based on the selected types, generate the equivalent graphql type. use libraries to parse the openapi spec and graphql schema

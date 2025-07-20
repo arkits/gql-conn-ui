@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { OpenAPISpec, SelectedAttributes, SelectedEndpoints } from '../types/openapi';
 import { generateGraphQLSchemaFromSelections } from '../lib/graphql/generateGraphQL';
 import { generateAppConfigYaml } from '../lib/appConfig/configGenerator';
@@ -17,6 +17,11 @@ export function useGraphQLGeneration(
     return Object.keys(selectedEndpoints).length > 0;
   }, [selectedEndpoints]);
 
+  // Use refs to track previous values
+  const prevOpenApiRef = useRef<OpenAPISpec | null>(null);
+  const prevSelectedEndpointsRef = useRef<SelectedEndpoints>({});
+
+  // Effect for GraphQL schema generation
   useEffect(() => {
     if (openApi && hasSelections) {
       try {
@@ -28,14 +33,29 @@ export function useGraphQLGeneration(
     } else {
       setGraphqlSchema('# GraphQL schema will appear here\n');
     }
-
-    try {
-      setAppConfigYaml(generateAppConfigYaml(openApi, selectedEndpoints));
-    } catch (error) {
-      console.error('Error generating app config:', error);
-      setAppConfigYaml('# Error generating application config\n');
-    }
   }, [openApi, selectedAttrs, selectedEndpoints, hasSelections, requiredScopes]);
+
+  // Effect for app config generation - only when dependencies actually change
+  useEffect(() => {
+    const openApiChanged = JSON.stringify(openApi) !== JSON.stringify(prevOpenApiRef.current);
+    const selectedEndpointsChanged = JSON.stringify(selectedEndpoints) !== JSON.stringify(prevSelectedEndpointsRef.current);
+    
+    // Always call on first render (when refs are null/empty)
+    const isFirstRender = prevOpenApiRef.current === null && Object.keys(prevSelectedEndpointsRef.current).length === 0;
+    
+    if (isFirstRender || openApiChanged || selectedEndpointsChanged) {
+      try {
+        setAppConfigYaml(generateAppConfigYaml(openApi, selectedEndpoints));
+      } catch (error) {
+        console.error('Error generating app config:', error);
+        setAppConfigYaml('# Error generating application config\n');
+      }
+      
+      // Update refs
+      prevOpenApiRef.current = openApi;
+      prevSelectedEndpointsRef.current = selectedEndpoints;
+    }
+  }, [openApi, selectedEndpoints]);
 
   return {
     graphqlSchema,

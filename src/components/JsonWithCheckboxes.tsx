@@ -42,11 +42,11 @@ const JsonProperty = memo<{
           color={darkMode ? 'gray.100' : 'gray.800'}
           wordBreak="break-word"
         >
-          <Box as="span" fontWeight="bold" color="teal.300">{propKey}</Box>
+          <Box as="span" fontWeight="bold" color={darkMode ? 'teal.300' : 'teal.600'}>{propKey}</Box>
           {!isComplexValue && (
             <>
-              <Box as="span" color="gray.500">: </Box>
-              <Box as="span" color="purple.400">{JSON.stringify(value)}</Box>
+              <Box as="span" color={darkMode ? 'gray.400' : 'gray.600'}>: </Box>
+              <Box as="span" color={darkMode ? 'purple.400' : 'purple.600'}>{JSON.stringify(value)}</Box>
             </>
           )}
         </Text>

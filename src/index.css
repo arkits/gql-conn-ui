@@ -1,13 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
-
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   line-height: 1.6;
   font-weight: 400;
 
+  --color-primary: #4FD1C5; /* teal.300 */
+  --color-secondary: #A78BFA; /* purple.400 */
+  --color-bg: #18181B;
+  --color-bg-light: #F7FAFC;
+  --color-text: #F1F1F1;
+  --color-text-light: #1A202C;
+  --color-heading: #E2E8F0;
+  --color-heading-light: #2D3748;
+  --color-link: var(--color-primary);
+  --color-link-hover: #319795;
+  --color-button-bg: #23232B;
+  --color-button-bg-hover: #26263A;
+  --color-button-bg-light: #EDF2F7;
+  --color-button-bg-hover-light: #E2E8F0;
+  --color-border: #38B2AC;
+  --color-border-light: #2B6CB0;
   color-scheme: light dark;
-  color: #F1F1F1;
-  background-color: #18181B;
+  color: var(--color-text);
+  background-color: var(--color-bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,25 +31,25 @@
 
 a {
   font-weight: 500;
-  color: #38B2AC;
+  color: var(--color-link);
   text-decoration: inherit;
 }
 a:hover {
-  color: #319795;
+  color: var(--color-link-hover);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #18181B;
-  color: #F1F1F1;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   font-weight: 700;
-  color: #E2E8F0;
+  color: var(--color-heading);
 }
 
 button {
@@ -45,14 +59,14 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #23232B;
-  color: #F1F1F1;
+  background-color: var(--color-button-bg);
+  color: var(--color-text);
   cursor: pointer;
   transition: border-color 0.25s, background 0.2s;
 }
 button:hover {
-  border-color: #38B2AC;
-  background: #26263A;
+  border-color: var(--color-border);
+  background: var(--color-button-bg-hover);
 }
 button:focus,
 button:focus-visible {
@@ -61,28 +75,29 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #1A202C;
-    background-color: #F7FAFC;
+    color: var(--color-text-light);
+    background-color: var(--color-bg-light);
   }
   a {
-    color: #2B6CB0;
+    color: var(--color-border-light);
   }
   a:hover {
     color: #2C5282;
   }
   body {
-    background: #F7FAFC;
-    color: #1A202C;
+    background: var(--color-bg-light);
+    color: var(--color-text-light);
   }
   h1, h2, h3, h4, h5, h6 {
-    color: #2D3748;
+    color: var(--color-heading-light);
+    font-family: 'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
   }
   button {
-    background-color: #EDF2F7;
-    color: #1A202C;
+    background-color: var(--color-button-bg-light);
+    color: var(--color-text-light);
   }
   button:hover {
-    background: #E2E8F0;
-    border-color: #2B6CB0;
+    background: var(--color-button-bg-hover-light);
+    border-color: var(--color-border-light);
   }
 }

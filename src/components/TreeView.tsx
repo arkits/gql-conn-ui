@@ -36,7 +36,7 @@ export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, sel
         <Box key={i} pl={2} borderLeft="2px solid" borderColor="gray.200" className="dark:border-gray-600">
           <HStack gap={2} cursor="pointer" onClick={() => toggleEndpoint(node.path)}>
             {expandedEndpoints[node.path] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            <Text fontWeight="bold" color="teal.500">{node.path}</Text>
+            <Text fontWeight="bold" color={darkMode ? 'teal.300' : 'teal.600'}>{node.path}</Text>
           </HStack>
           {expandedEndpoints[node.path] && (
             <VStack align="start" pl={4} gap={1}>
@@ -44,7 +44,7 @@ export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, sel
                 <Box key={j}>
                   <HStack gap={2} cursor="pointer" onClick={() => toggleMethod(node.path, m.method)}>
                     {expandedMethods[node.path]?.[m.method] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    <Text fontSize="sm" color="purple.500">{m.method}</Text>
+                    <Text fontSize="sm" color={darkMode ? 'purple.400' : 'purple.600'}>{m.method}</Text>
                     <Text fontSize="sm">{m.details.summary || ""}</Text>
                   </HStack>
                   {expandedMethods[node.path]?.[m.method] && openApi && (

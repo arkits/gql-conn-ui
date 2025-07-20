@@ -27,27 +27,27 @@ interface Parameter {
 const ParameterList = memo<{
   parameters: Parameter[];
   darkMode: boolean;
-}>(({ parameters }) => {
+}>(({ parameters, darkMode }) => {
   if (parameters.length === 0) return null;
   
   return (
     <Box mb={2}>
-      <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>
+      <Text fontSize="xs" fontWeight="bold" color={darkMode ? 'gray.400' : 'gray.600'} mb={1}>
         Parameters:
       </Text>
       <Box pl={2}>
         {parameters.map((param: Parameter, idx: number) => (
           <Box key={idx} display="flex" alignItems="center" fontSize="xs" mb={1}>
-            <Text as="span" fontWeight="bold" color="teal.300" minW="60px">
+            <Text as="span" fontWeight="bold" color={darkMode ? 'teal.300' : 'teal.600'} minW="60px">
               {param.name}
             </Text>
-            <Text as="span" color="gray.400" ml={2} minW="40px">
+            <Text as="span" color={darkMode ? 'gray.400' : 'gray.600'} ml={2} minW="40px">
               {param.in}
             </Text>
-            <Text as="span" color="purple.400" ml={2} minW="50px">
+            <Text as="span" color={darkMode ? 'purple.400' : 'purple.600'} ml={2} minW="50px">
               {param.schema?.type || ''}
             </Text>
-            <Text as="span" color="gray.500" ml={2}>
+            <Text as="span" color={darkMode ? 'gray.400' : 'gray.600'} ml={2}>
               {param.description || ''}
             </Text>
           </Box>
@@ -73,10 +73,10 @@ const RequestBodySection = memo<{
   
   return (
     <Box mb={2}>
-      <Text fontSize="xs" fontWeight="bold" color="gray.500" mb={1}>
+      <Text fontSize="xs" fontWeight="bold" color={darkMode ? 'gray.400' : 'gray.600'} mb={1}>
         Request Body:
       </Text>
-      <Text fontSize="xs" pl={2} color="gray.400">
+      <Text fontSize="xs" pl={2} color={darkMode ? 'gray.400' : 'gray.600'}>
         {requestBody.description || 'No description'}
       </Text>
       {requestBody.content && (
@@ -202,7 +202,7 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
                 
                 return (
                   <Box key={`${idx}-${j}`} mb={3}>
-                    <Text fontSize="xs" fontWeight="bold" color="purple.400" mb={1}>
+                    <Text fontSize="xs" fontWeight="bold" color={darkMode ? 'purple.400' : 'purple.600'} mb={1}>
                       {typeName}
                     </Text>
                     <SelectAllButton

@@ -72,9 +72,9 @@ function AppContent() {
             mb={3}
           >
             <HStack gap={6} align="center">
-              <Heading size="md" color="teal.400" letterSpacing="tight" fontWeight={700}>
+              <Heading size="md" color={darkMode ? 'teal.300' : 'teal.600'} letterSpacing="tight" fontWeight={700}>
                 OpenAPI{" "}
-                <Box as="span" color={darkMode ? 'gray.400' : 'gray.600'} fontWeight={400} mx={1}>
+                <Box as="span" color={darkMode ? 'purple.400' : 'purple.600'} fontWeight={400} mx={1}>
                   →
                 </Box>{" "}
                 GraphQL Converter
@@ -100,7 +100,7 @@ function AppContent() {
                 onClick={() => setDarkMode((d) => !d)}
                 variant="ghost"
                 size="md"
-                color={darkMode ? 'yellow.300' : 'gray.700'}
+                color={darkMode ? 'teal.300' : 'teal.600'}
                 _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
               >
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -111,7 +111,7 @@ function AppContent() {
                     aria-label="Help"
                     variant="ghost"
                     size="md"
-                    color={darkMode ? 'teal.200' : 'teal.700'}
+                    color={darkMode ? 'purple.400' : 'purple.600'}
                     _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
                   >
                     <HelpCircle size={20} />
@@ -181,7 +181,7 @@ function AppContent() {
             borderColor={darkMode ? 'gray.700' : 'gray.200'} 
             bg={darkMode ? '#18181B' : 'white'}
           >
-            <Heading size="sm" mb={4} color="teal.600">
+            <Heading size="sm" mb={4} color={darkMode ? 'teal.300' : 'teal.600'}>
               OpenAPI Spec
             </Heading>
             {openApiTree.length > 0 ? (
@@ -194,7 +194,7 @@ function AppContent() {
                 onSelectAllAttrs={handleSelectAllAttrs} 
               />
             ) : (
-              <Box color="gray.400">
+              <Box color={darkMode ? 'gray.400' : 'gray.600'}>
                 Upload an OpenAPI spec to visualize endpoints.
               </Box>
             )}
@@ -271,7 +271,7 @@ function AppContent() {
                   display="flex" 
                   flexDirection="column"
                 >
-                  <Heading size="sm" mb={4} color="purple.600">
+                  <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
                     GraphQL Schema
                   </Heading>
                   <Box 
@@ -295,7 +295,8 @@ function AppContent() {
                       options={{ 
                         minimap: { enabled: false }, 
                         scrollBeyondLastLine: true, 
-                        automaticLayout: true 
+                        automaticLayout: true,
+                        fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
                       }}
                     />
                   </Box>
@@ -309,7 +310,7 @@ function AppContent() {
                   display="flex" 
                   flexDirection="column"
                 >
-                  <Heading size="sm" mb={4} color="purple.600">
+                  <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
                     App Config YAML
                   </Heading>
                   <Box 
@@ -333,7 +334,8 @@ function AppContent() {
                       options={{ 
                         minimap: { enabled: false }, 
                         scrollBeyondLastLine: true, 
-                        automaticLayout: true 
+                        automaticLayout: true,
+                        fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
                       }}
                     />
                   </Box>

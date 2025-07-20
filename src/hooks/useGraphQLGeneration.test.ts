@@ -333,7 +333,7 @@ describe('useGraphQLGeneration', () => {
         }
       };
 
-      const { result, rerender } = renderHookWithSettings(
+      const { rerender } = renderHookWithSettings(
         ({ openApi }: { openApi: OpenAPISpec }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
         { initialProps: { openApi: openApi1 } }
       );

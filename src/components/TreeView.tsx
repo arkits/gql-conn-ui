@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Box, VStack, HStack, Text } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { MethodDetails } from "./MethodDetails";
-import type { OpenAPISpec, SelectedAttributes, TreeNode } from '../types/openapi';
+import type { OpenAPISpec, SelectedAttributes, TreeNode, TreeMethod } from '../types/openapi';
 
 export interface TreeViewProps {
   tree: TreeNode[];
@@ -40,7 +40,7 @@ export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, sel
           </HStack>
           {expandedEndpoints[node.path] && (
             <VStack align="start" pl={4} gap={1}>
-              {node.methods.map((m, j: number) => (
+              {node.methods.map((m: TreeMethod, j: number) => (
                 <Box key={j}>
                   <HStack gap={2} cursor="pointer" onClick={() => toggleMethod(node.path, m.method)}>
                     {expandedMethods[node.path]?.[m.method] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

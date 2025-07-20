@@ -24,7 +24,8 @@ export function buildObjectType(
   typeMaps: TypeMaps
 ): GraphQLObjectType | GraphQLList<GraphQLObjectType> {
   if (!schema) {
-    return new GraphQLObjectType({ name: name + '_Empty', fields: {} });
+    const typeName = name.endsWith('_Empty') ? name : name + '_Empty';
+    return new GraphQLObjectType({ name: typeName, fields: {} });
   }
 
   if (schema.$ref) {
@@ -87,7 +88,8 @@ export function buildInputType(
   typeMaps: TypeMaps
 ): GraphQLInputObjectType {
   if (!schema) {
-    return new GraphQLInputObjectType({ name: name + '_Empty', fields: {} });
+    const typeName = name.endsWith('_Empty') ? name : name + '_Empty';
+    return new GraphQLInputObjectType({ name: typeName, fields: {} });
   }
 
   if (schema.$ref) {

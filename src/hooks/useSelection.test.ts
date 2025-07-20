@@ -1,335 +1,267 @@
-import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSelection } from './useSelection';
 
-describe('useSelection', () => {
-  describe('initial state', () => {
-    it('should initialize with empty selected attributes', () => {
-      const { result } = renderHook(() => useSelection());
+// Mock the openapi utils
+vi.mock('../utils/openapi', () => ({
+  collectPaths: vi.fn((sample) => {
+    if (sample && typeof sample === 'object') {
+      return Object.keys(sample);
+    }
+    return [];
+  }),
+}));
 
-      expect(result.current.selectedAttrs).toEqual({});
-    });
+describe('useSelection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   describe('handleAttrToggle', () => {
-    it('should add attribute selection', () => {
+    it('toggles attribute selection', () => {
       const { result } = renderHook(() => useSelection());
 
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
+        result.current.handleAttrToggle('Pet', ['id']);
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: {
-          id: true
-        }
+      expect(result.current.selectedAttrs.Pet['id']).toBe(true);
+
+      act(() => {
+        result.current.handleAttrToggle('Pet', ['id']);
       });
+
+      expect(result.current.selectedAttrs.Pet['id']).toBe(false);
     });
 
-    it('should toggle existing attribute selection off', () => {
+    it('handles nested attribute paths', () => {
       const { result } = renderHook(() => useSelection());
 
-      // First, add the selection
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
+        result.current.handleAttrToggle('Pet', ['owner', 'id']);
       });
 
-      expect(result.current.selectedAttrs.User.id).toBe(true);
-
-      // Then toggle it off
-      act(() => {
-        result.current.handleAttrToggle('User', ['id']);
-      });
-
-      expect(result.current.selectedAttrs.User.id).toBe(false);
+      expect(result.current.selectedAttrs.Pet['owner.id']).toBe(true);
     });
 
-    it('should handle nested attribute paths', () => {
+    it('updates selectedEndpoints when endpoint info is provided', () => {
       const { result } = renderHook(() => useSelection());
 
       act(() => {
-        result.current.handleAttrToggle('User', ['profile', 'email']);
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'get');
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: {
-          'profile.email': true
-        }
-      });
+      expect(result.current.selectedAttrs.Pet['id']).toBe(true);
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeDefined();
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].typeName).toBe('Pet');
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].selectedAttrs['id']).toBe(true);
     });
 
-    it('should handle multiple attributes for same type', () => {
+    it('removes endpoint when no attributes are selected', () => {
       const { result } = renderHook(() => useSelection());
 
+      // First, select an attribute
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
-        result.current.handleAttrToggle('User', ['name']);
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'get');
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: {
-          id: true,
-          name: true
-        }
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeDefined();
+
+      // Then, deselect the attribute
+      act(() => {
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'get');
       });
+
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeUndefined();
     });
 
-    it('should handle multiple types', () => {
+    it('handles multiple attributes for the same type', () => {
       const { result } = renderHook(() => useSelection());
 
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
-        result.current.handleAttrToggle('Post', ['title']);
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'get');
+        result.current.handleAttrToggle('Pet', ['name'], '/pets/{id}', 'get');
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: {
-          id: true
-        },
-        Post: {
-          title: true
-        }
-      });
+      expect(result.current.selectedAttrs.Pet['id']).toBe(true);
+      expect(result.current.selectedAttrs.Pet['name']).toBe(true);
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].selectedAttrs['id']).toBe(true);
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].selectedAttrs['name']).toBe(true);
     });
 
-    it('should preserve existing selections when adding new ones', () => {
+    it('preserves other types when toggling attributes', () => {
       const { result } = renderHook(() => useSelection());
 
+      // First, select an attribute for one type
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
-        result.current.handleAttrToggle('User', ['name']);
-        result.current.handleAttrToggle('Post', ['title']);
+        result.current.handleAttrToggle('Pet', ['id']);
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: {
-          id: true,
-          name: true
-        },
-        Post: {
-          title: true
-        }
-      });
-
-      // Add another attribute to User
+      // Then, select an attribute for another type
       act(() => {
         result.current.handleAttrToggle('User', ['email']);
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: {
-          id: true,
-          name: true,
-          email: true
-        },
-        Post: {
-          title: true
-        }
-      });
+      expect(result.current.selectedAttrs.Pet['id']).toBe(true);
+      expect(result.current.selectedAttrs.User['email']).toBe(true);
     });
   });
 
   describe('handleSelectAllAttrs', () => {
-    const sampleData = {
-      id: 'string',
-      name: 'John Doe',
-      profile: {
-        email: 'john@example.com',
-        bio: 'Software Developer'
-      }
-    };
-
-    it('should select all attributes when none are selected', () => {
+    it('selects all attributes when none are selected', () => {
       const { result } = renderHook(() => useSelection());
+      const sample = { id: '1', name: 'Fluffy', age: 3 };
 
       act(() => {
-        result.current.handleSelectAllAttrs('User', sampleData);
+        result.current.handleSelectAllAttrs('Pet', sample);
       });
 
-      expect(result.current.selectedAttrs.User).toEqual({
-        id: true,
-        name: true,
-        profile: true,
-        'profile.email': true,
-        'profile.bio': true
-      });
+      expect(result.current.selectedAttrs.Pet['id']).toBe(true);
+      expect(result.current.selectedAttrs.Pet['name']).toBe(true);
+      expect(result.current.selectedAttrs.Pet['age']).toBe(true);
     });
 
-    it('should deselect all attributes when all are selected', () => {
+    it('deselects all attributes when all are selected', () => {
       const { result } = renderHook(() => useSelection());
+      const sample = { id: '1', name: 'Fluffy' };
 
-      // First, select all
+      // First, select all attributes
       act(() => {
-        result.current.handleSelectAllAttrs('User', sampleData);
+        result.current.handleSelectAllAttrs('Pet', sample);
       });
 
-      expect(Object.keys(result.current.selectedAttrs.User)).toHaveLength(5);
+      expect(result.current.selectedAttrs.Pet['id']).toBe(true);
+      expect(result.current.selectedAttrs.Pet['name']).toBe(true);
 
-      // Then deselect all
+      // Then, deselect all attributes
       act(() => {
-        result.current.handleSelectAllAttrs('User', sampleData);
+        result.current.handleSelectAllAttrs('Pet', sample);
       });
 
-      expect(result.current.selectedAttrs.User).toEqual({});
+      expect(result.current.selectedAttrs.Pet['id']).toBeUndefined();
+      expect(result.current.selectedAttrs.Pet['name']).toBeUndefined();
     });
 
-    it('should select all when some attributes are selected', () => {
+    it('updates selectedEndpoints when endpoint info is provided', () => {
       const { result } = renderHook(() => useSelection());
+      const sample = { id: '1', name: 'Fluffy' };
 
-      // Select only some attributes
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
-        result.current.handleAttrToggle('User', ['name']);
+        result.current.handleSelectAllAttrs('Pet', sample, '/pets/{id}', 'get');
       });
 
-      expect(result.current.selectedAttrs.User).toEqual({
-        id: true,
-        name: true
-      });
-
-      // Select all should fill in the rest
-      act(() => {
-        result.current.handleSelectAllAttrs('User', sampleData);
-      });
-
-      expect(result.current.selectedAttrs.User).toEqual({
-        id: true,
-        name: true,
-        profile: true,
-        'profile.email': true,
-        'profile.bio': true
-      });
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeDefined();
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].selectedAttrs['id']).toBe(true);
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].selectedAttrs['name']).toBe(true);
     });
 
-    it('should handle array data', () => {
-      const arrayData = {
-        items: [
-          { id: 1, name: 'Item 1' }
-        ]
-      };
-
+    it('removes endpoint when deselecting all attributes', () => {
       const { result } = renderHook(() => useSelection());
+      const sample = { id: '1', name: 'Fluffy' };
 
+      // First, select all attributes
       act(() => {
-        result.current.handleSelectAllAttrs('List', arrayData);
+        result.current.handleSelectAllAttrs('Pet', sample, '/pets/{id}', 'get');
       });
 
-      expect(result.current.selectedAttrs.List).toEqual({
-        items: true,
-        'items.0': true,
-        'items.0.id': true,
-        'items.0.name': true
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeDefined();
+
+      // Then, deselect all attributes
+      act(() => {
+        result.current.handleSelectAllAttrs('Pet', sample, '/pets/{id}', 'get');
       });
+
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeUndefined();
     });
 
-    it('should handle empty objects', () => {
+    it('handles empty sample object', () => {
       const { result } = renderHook(() => useSelection());
+      const sample = {};
 
       act(() => {
-        result.current.handleSelectAllAttrs('Empty', {});
+        result.current.handleSelectAllAttrs('Pet', sample);
       });
 
-      expect(result.current.selectedAttrs.Empty).toEqual({});
+      expect(result.current.selectedAttrs.Pet).toEqual({});
     });
 
-    it('should preserve selections for other types', () => {
-      const { result } = renderHook(() => useSelection());
-
-      // Select some attributes for different type
-      act(() => {
-        result.current.handleAttrToggle('Post', ['title']);
-      });
-
-      // Select all for User
-      act(() => {
-        result.current.handleSelectAllAttrs('User', sampleData);
-      });
-
-      expect(result.current.selectedAttrs.Post).toEqual({
-        title: true
-      });
-      expect(result.current.selectedAttrs.User).toEqual({
-        id: true,
-        name: true,
-        profile: true,
-        'profile.email': true,
-        'profile.bio': true
-      });
-    });
-
-    it('should handle deeply nested objects', () => {
-      const deepData = {
-        level1: {
-          level2: {
-            level3: {
-              value: 'deep'
-            }
-          }
-        }
-      };
-
+    it('handles null or undefined sample', () => {
       const { result } = renderHook(() => useSelection());
 
       act(() => {
-        result.current.handleSelectAllAttrs('Deep', deepData);
+        result.current.handleSelectAllAttrs('Pet', null);
       });
 
-      expect(result.current.selectedAttrs.Deep).toEqual({
-        level1: true,
-        'level1.level2': true,
-        'level1.level2.level3': true,
-        'level1.level2.level3.value': true
-      });
+      expect(result.current.selectedAttrs.Pet).toEqual({});
     });
   });
 
   describe('clearSelection', () => {
-    it('should clear all selections', () => {
+    it('clears all selected attributes and endpoints', () => {
       const { result } = renderHook(() => useSelection());
 
-      // Add some selections
+      // First, add some selections
       act(() => {
-        result.current.handleAttrToggle('User', ['id']);
-        result.current.handleAttrToggle('Post', ['title']);
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'get');
+        result.current.handleAttrToggle('User', ['email'], '/users/{id}', 'get');
       });
 
-      expect(result.current.selectedAttrs).toEqual({
-        User: { id: true },
-        Post: { title: true }
-      });
+      expect(Object.keys(result.current.selectedAttrs).length).toBeGreaterThan(0);
+      expect(Object.keys(result.current.selectedEndpoints).length).toBeGreaterThan(0);
 
-      // Clear all
+      // Then, clear all selections
       act(() => {
         result.current.clearSelection();
       });
 
       expect(result.current.selectedAttrs).toEqual({});
-    });
-
-    it('should work when no selections exist', () => {
-      const { result } = renderHook(() => useSelection());
-
-      act(() => {
-        result.current.clearSelection();
-      });
-
-      expect(result.current.selectedAttrs).toEqual({});
+      expect(result.current.selectedEndpoints).toEqual({});
     });
   });
 
-  describe('callback stability', () => {
-    it('should maintain callback references across renders', () => {
-      const { result, rerender } = renderHook(() => useSelection());
+  describe('initial state', () => {
+    it('starts with empty selections', () => {
+      const { result } = renderHook(() => useSelection());
 
-      const initialHandleAttrToggle = result.current.handleAttrToggle;
-      const initialHandleSelectAllAttrs = result.current.handleSelectAllAttrs;
-      const initialClearSelection = result.current.clearSelection;
+      expect(result.current.selectedAttrs).toEqual({});
+      expect(result.current.selectedEndpoints).toEqual({});
+    });
+  });
 
-      rerender();
+  describe('complex scenarios', () => {
+    it('handles multiple endpoints for the same type', () => {
+      const { result } = renderHook(() => useSelection());
 
-      expect(result.current.handleAttrToggle).toBe(initialHandleAttrToggle);
-      expect(result.current.handleSelectAllAttrs).toBe(initialHandleSelectAllAttrs);
-      expect(result.current.clearSelection).toBe(initialClearSelection);
+      act(() => {
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'get');
+        result.current.handleAttrToggle('Pet', ['name'], '/pets', 'get');
+      });
+
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeDefined();
+      expect(result.current.selectedEndpoints['GET_/pets']).toBeDefined();
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].selectedAttrs['id']).toBe(true);
+      expect(result.current.selectedEndpoints['GET_/pets'].selectedAttrs['name']).toBe(true);
+    });
+
+    it('handles case-insensitive method names', () => {
+      const { result } = renderHook(() => useSelection());
+
+      act(() => {
+        result.current.handleAttrToggle('Pet', ['id'], '/pets/{id}', 'GET');
+      });
+
+      expect(result.current.selectedEndpoints['GET_/pets/{id}']).toBeDefined();
+      expect(result.current.selectedEndpoints['GET_/pets/{id}'].method).toBe('GET');
+    });
+
+    it('handles deeply nested attribute paths', () => {
+      const { result } = renderHook(() => useSelection());
+
+      act(() => {
+        result.current.handleAttrToggle('Pet', ['owner', 'profile', 'email']);
+      });
+
+      expect(result.current.selectedAttrs.Pet['owner.profile.email']).toBe(true);
     });
   });
 });

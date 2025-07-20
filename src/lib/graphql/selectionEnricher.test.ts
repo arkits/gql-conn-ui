@@ -1,125 +1,310 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { enrichSelectedAttributes } from './selectionEnricher';
-import type { OpenAPISpec, SelectedAttributes } from '../../types/openapi';
+import type { OpenAPISpec } from '../../types/openapi';
 
-describe('Selection Enricher', () => {
-  const mockOpenApi: OpenAPISpec = {
-    components: {
-      schemas: {
-        User: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            profile: { $ref: '#/components/schemas/Profile' },
-            posts: {
-              type: 'array',
-              items: { $ref: '#/components/schemas/Post' }
-            }
-          }
+// Mock the utils module
+vi.mock('./utils', () => ({
+  hasRef: vi.fn((schema) => !!schema?.$ref),
+  getRefName: vi.fn((ref) => ref.replace('#/components/schemas/', '')),
+}));
+
+const mockOpenApi: OpenAPISpec = {
+  paths: {},
+  components: {
+    schemas: {
+      Pet: {
+        type: 'object' as const,
+        properties: {
+          id: { type: 'string' as const },
+          name: { type: 'string' as const },
+          owner: { $ref: '#/components/schemas/User' },
+          tags: {
+            type: 'array' as const,
+            items: { $ref: '#/components/schemas/Tag' },
+          },
         },
-        Profile: {
-          type: 'object',
-          properties: {
-            email: { type: 'string' },
-            settings: { $ref: '#/components/schemas/Settings' }
-          }
+      },
+      User: {
+        type: 'object' as const,
+        properties: {
+          id: { type: 'integer' as const },
+          email: { type: 'string' as const },
+          name: { type: 'string' as const },
         },
-        Settings: {
-          type: 'object',
-          properties: {
-            theme: { type: 'string' },
-            notifications: { type: 'boolean' }
-          }
+      },
+      Tag: {
+        type: 'object' as const,
+        properties: {
+          id: { type: 'integer' as const },
+          name: { type: 'string' as const },
         },
-        Post: {
-          type: 'object',
-          properties: {
-            title: { type: 'string' },
-            content: { type: 'string' },
-            author: { $ref: '#/components/schemas/User' }
-          }
-        }
-      }
-    }
-  };
+      },
+      Pets: {
+        type: 'array' as const,
+        items: { $ref: '#/components/schemas/Pet' },
+      },
+    },
+  },
+};
+
+describe('selectionEnricher', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   describe('enrichSelectedAttributes', () => {
-    it('should preserve existing selections', () => {
-      const selectedAttrs: SelectedAttributes = {
-        User: {
-          id: true,
-          'profile.email': true
+    it('returns enriched attributes for nested object properties', () => {
+      const selectedAttrs = {
+        Pet: {
+          'owner.id': true,
+          'owner.email': true,
         },
-        Profile: {
-          email: true,
-          settings: true
-        }
       };
 
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
 
-      expect(enriched.User.id).toBe(true);
-      expect(enriched.Profile.email).toBe(true);
-      expect(enriched.Profile.settings).toBe(true);
-    });
-
-    it('should handle selections without nested paths', () => {
-      const selectedAttrs: SelectedAttributes = {
+      expect(result).toEqual({
+        Pet: {
+          'owner.id': true,
+          'owner.email': true,
+        },
         User: {
-          id: true,
-          profile: true
-        }
+          'id': true,
+          'email': true,
+        },
+      });
+    });
+
+    it('handles array properties with references', () => {
+      const selectedAttrs = {
+        Pet: {
+          'tags.0.id': true,
+          'tags.0.name': true,
+        },
       };
 
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
 
-      expect(enriched.User).toEqual({
-        id: true,
-        profile: true
+      expect(result).toEqual({
+        Pet: {
+          'tags.0.id': true,
+          'tags.0.name': true,
+        },
+        Tag: {
+          'id': true,
+          'name': true,
+        },
       });
-
-      // No enrichment needed for simple selections
-      expect(enriched.Profile).toBeUndefined();
     });
 
-    it('should handle empty selections', () => {
-      const selectedAttrs: SelectedAttributes = {};
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
-      expect(enriched).toEqual({});
+    it('handles deeply nested properties', () => {
+      const selectedAttrs = {
+        Pet: {
+          'owner.name': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pet: {
+          'owner.name': true,
+        },
+        User: {
+          'name': true,
+        },
+      });
     });
 
-    it('should handle selections for non-existent schemas', () => {
-      const selectedAttrs: SelectedAttributes = {
+    it('handles root array types', () => {
+      const selectedAttrs = {
+        Pets: {
+          '0.id': true,
+          '0.name': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pets: {
+          '0.id': true,
+          '0.name': true,
+        },
+        Pet: {
+          'id': true,
+          'name': true,
+        },
+      });
+    });
+
+    it('handles array properties with nested references', () => {
+      const selectedAttrs = {
+        Pet: {
+          'tags.0.id': true,
+          'owner.id': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pet: {
+          'tags.0.id': true,
+          'owner.id': true,
+        },
+        Tag: {
+          'id': true,
+        },
+        User: {
+          'id': true,
+        },
+      });
+    });
+
+    it('preserves original selection state', () => {
+      const selectedAttrs = {
+        Pet: {
+          'id': true,
+          'name': false,
+          'owner.id': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result.Pet['id']).toBe(true);
+      expect(result.Pet['name']).toBe(false);
+      expect(result.Pet['owner.id']).toBe(true);
+    });
+
+    it('handles multiple types with overlapping references', () => {
+      const selectedAttrs = {
+        Pet: {
+          'owner.id': true,
+        },
+        User: {
+          'id': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pet: {
+          'owner.id': true,
+        },
+        User: {
+          'id': true,
+        },
+      });
+    });
+
+    it('handles non-existent schema gracefully', () => {
+      const selectedAttrs = {
         NonExistent: {
-          'field.nested': true
-        }
+          'some.property': true,
+        },
       };
 
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
 
-      expect(enriched.NonExistent).toEqual({
-        'field.nested': true
+      expect(result).toEqual({
+        NonExistent: {
+          'some.property': true,
+        },
       });
     });
 
-    it('should merge multiple enrichments for the same type', () => {
-      const selectedAttrs: SelectedAttributes = {
-        User: {
-          'profile.email': true,
-          'posts.0.author.id': true
-        }
+    it('handles empty selected attributes', () => {
+      const selectedAttrs = {};
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({});
+    });
+
+    it('handles attributes without dots (not nested)', () => {
+      const selectedAttrs = {
+        Pet: {
+          'id': true,
+          'name': true,
+        },
       };
 
-      const enriched = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
 
-      expect(enriched.User).toEqual({
-        'profile.email': true,
-        'posts.0.author.id': true,
-        id: true // from posts.0.author.id
+      expect(result).toEqual({
+        Pet: {
+          'id': true,
+          'name': true,
+        },
       });
+    });
 
-      expect(enriched.Profile).toEqual({
-        email: true
+    it('handles complex nested array scenarios', () => {
+      const selectedAttrs = {
+        Pet: {
+          'tags.0.id': true,
+          'tags.0.name': true,
+          'owner.name': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pet: {
+          'tags.0.id': true,
+          'tags.0.name': true,
+          'owner.name': true,
+        },
+        Tag: {
+          'id': true,
+          'name': true,
+        },
+        User: {
+          'name': true,
+        },
+      });
+    });
+
+    it('handles array index zero with nested properties', () => {
+      const selectedAttrs = {
+        Pet: {
+          'tags.0.id': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pet: {
+          'tags.0.id': true,
+        },
+        Tag: {
+          'id': true,
+        },
+      });
+    });
+
+    it('handles root array with nested properties', () => {
+      const selectedAttrs = {
+        Pets: {
+          '0.owner.id': true,
+        },
+      };
+
+      const result = enrichSelectedAttributes(selectedAttrs, mockOpenApi);
+
+      expect(result).toEqual({
+        Pets: {
+          '0.owner.id': true,
+        },
+        Pet: {},
+        User: {
+          'id': true,
+        },
       });
     });
   });

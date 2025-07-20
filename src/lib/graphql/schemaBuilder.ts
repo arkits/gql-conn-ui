@@ -44,7 +44,7 @@ export function buildObjectType(
 
   if (schema.type === 'object') {
     const selected = selectedAttrs[typeName] || {};
-    const fields: GraphQLFieldConfigMap<any, any> = {};
+    const fields: GraphQLFieldConfigMap<unknown, unknown> = {};
 
     if (schema.properties) {
       for (const [key, propSchema] of Object.entries(schema.properties)) {
@@ -69,11 +69,11 @@ export function buildObjectType(
 
   if (schema.type === 'array') {
     let itemTypeName = typeName.replace(/s$/, '');
-    if (hasRef(schema.items)) {
+    if (hasRef(schema.items) && schema.items) {
       itemTypeName = getRefName(schema.items.$ref);
     }
     return new GraphQLList(
-      buildObjectType(itemTypeName, schema.items!, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps) as GraphQLObjectType
+      buildObjectType(itemTypeName, schema.items || {}, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps) as GraphQLObjectType
     );
   }
 
@@ -105,7 +105,7 @@ export function buildInputType(
   }
 
   if (schema.type === 'object') {
-    const fields: any = {};
+    const fields: Record<string, { type: GraphQLInputType }> = {};
     if (schema.properties) {
       for (const [key, propSchema] of Object.entries(schema.properties)) {
         fields[key] = { 
@@ -174,17 +174,19 @@ function mapToGraphQLOutputTypeInternal(
   }
 
   switch (schema.type) {
-    case 'object':
+    case 'object': {
       return buildObjectType(typeName, schema, openApi, selectedAttrs, typeName, path, typeMaps);
+    }
     
-    case 'array':
+    case 'array': {
       let itemTypeName = typeName.replace(/s$/, '');
-      if (hasRef(schema.items)) {
+      if (hasRef(schema.items) && schema.items) {
         itemTypeName = getRefName(schema.items.$ref);
       }
       return new GraphQLList(
         mapToGraphQLOutputTypeInternal(schema.items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps)
       );
+    }
     
     case 'string':
       return GraphQLString;
@@ -220,13 +222,15 @@ function mapToGraphQLInputTypeInternal(
   }
 
   switch (schema.type) {
-    case 'object':
+    case 'object': {
       return buildInputType(nameHint, schema, openApi, typeMaps);
+    }
     
-    case 'array':
+    case 'array': {
       return new GraphQLList(
         mapToGraphQLInputTypeInternal(schema.items, openApi, typeMaps, nameHint + 'Item')
       );
+    }
     
     case 'string':
       return GraphQLString;

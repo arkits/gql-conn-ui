@@ -1,8 +1,8 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Box, Text } from "@chakra-ui/react";
 
 export interface JsonWithCheckboxesProps {
-  value: any;
+  value: unknown;
   path: string[];
   selected: Record<string, boolean>;
   onToggle: (path: string[]) => void;
@@ -11,13 +11,13 @@ export interface JsonWithCheckboxesProps {
 
 const JsonProperty = memo<{
   propKey: string;
-  value: any;
+  value: unknown;
   path: string[];
   selected: Record<string, boolean>;
   onToggle: (path: string[]) => void;
   darkMode: boolean;
 }>(({ propKey, value, path, selected, onToggle, darkMode }) => {
-  const attrPath = [...path, propKey];
+  const attrPath = useMemo(() => [...path, propKey], [path, propKey]);
   const checked = !!selected[attrPath.join('.')];
   
   const handleToggle = useCallback(() => {
@@ -67,7 +67,7 @@ const JsonProperty = memo<{
 JsonProperty.displayName = 'JsonProperty';
 
 const ArrayDisplay = memo<{
-  value: any[];
+  value: unknown[];
   path: string[];
   selected: Record<string, boolean>;
   onToggle: (path: string[]) => void;

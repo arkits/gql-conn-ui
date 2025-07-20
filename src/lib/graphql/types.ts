@@ -1,4 +1,5 @@
 import { GraphQLObjectType, GraphQLInputObjectType } from 'graphql';
+import type { GraphQLOutputType, GraphQLInputType } from 'graphql';
 
 export interface TypeMaps {
   output: Record<string, GraphQLObjectType>;
@@ -7,8 +8,8 @@ export interface TypeMaps {
 
 export interface GraphQLOperationResult {
   operationId: string;
-  gqlType: any;
-  args: Record<string, { type: any }>;
+  gqlType: GraphQLOutputType;
+  args: Record<string, { type: GraphQLInputType }>;
   description: string;
   directive: {
     path: string;

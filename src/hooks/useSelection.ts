@@ -27,7 +27,8 @@ export function useSelection() {
           
           if (!hasSelectedAttrs) {
             // Remove endpoint if no attributes selected
-            const { [endpointKey]: _, ...rest } = prevEndpoints;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { [endpointKey]: _removed, ...rest } = prevEndpoints;
             return rest;
           } else {
             // Update endpoint with current selectedAttrs for this type
@@ -50,7 +51,7 @@ export function useSelection() {
 
   const handleSelectAllAttrs = useCallback((
     typeName: string, 
-    sample: any, 
+    sample: unknown, 
     endpointPath?: string, 
     endpointMethod?: string
   ) => {
@@ -77,7 +78,8 @@ export function useSelection() {
         setSelectedEndpoints(prevEndpoints => {
           if (allSelected) {
             // Deselect all - remove endpoint
-            const { [endpointKey]: _, ...rest } = prevEndpoints;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { [endpointKey]: _removed, ...rest } = prevEndpoints;
             return rest;
           } else {
             // Select all - add/update endpoint

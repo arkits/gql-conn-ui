@@ -1,15 +1,23 @@
 import React from "react";
 import { Box } from "@chakra-ui/react";
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError(error: any) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
-  componentDidCatch(_error: any, _errorInfo: any) {}
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    // Log error to console or error reporting service
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
   render() {
     if (this.state.hasError) {
       return (

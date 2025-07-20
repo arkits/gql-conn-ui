@@ -6,7 +6,8 @@ import { TreeView } from "./components/TreeView";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
 import { SideDrawer } from "./components/SideDrawer";
-import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
+import { SettingsProvider } from "./contexts/SettingsContext";
+import { useSettings } from "./hooks/useSettings";
 
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useSelection } from "./hooks/useSelection";

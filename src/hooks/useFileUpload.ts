@@ -17,10 +17,10 @@ export function useFileUpload() {
 
       try {
         spec = JSON.parse(text);
-      } catch (jsonErr) {
+      } catch {
         try {
           spec = yaml.load(text) as OpenAPISpec;
-        } catch (yamlErr) {
+        } catch {
           return { success: false, error: 'Invalid OpenAPI file: must be valid JSON or YAML' };
         }
       }

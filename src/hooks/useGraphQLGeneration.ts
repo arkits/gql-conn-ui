@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import type { OpenAPISpec, SelectedAttributes, SelectedEndpoints } from '../types/openapi';
 import { generateGraphQLSchemaFromSelections } from '../lib/graphql/generateGraphQL';
 import { generateAppConfigYaml } from '../lib/appConfig/configGenerator';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings } from './useSettings';
 
 export function useGraphQLGeneration(
   openApi: OpenAPISpec | null, 

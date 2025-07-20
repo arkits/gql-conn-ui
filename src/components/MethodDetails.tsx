@@ -4,7 +4,7 @@ import { JsonWithCheckboxes } from "./JsonWithCheckboxes";
 import type { OpenAPISpec, SelectedAttributes, OpenAPIOperation } from '../types/openapi';
 import { generateSampleFromSchema, collectPaths } from '../utils/openapi';
 
-function isPlainObject(val: any): val is Record<string, boolean> {
+function isPlainObject(val: unknown): val is Record<string, boolean> {
   return val !== null && typeof val === 'object' && !Array.isArray(val);
 }
 
@@ -14,11 +14,18 @@ export interface MethodDetailsProps {
   darkMode: boolean;
   onAttrToggle: (typeName: string, path: string[]) => void;
   selectedAttrs: SelectedAttributes;
-  onSelectAllAttrs: (typeName: string, sample: any) => void;
+  onSelectAllAttrs: (typeName: string, sample: unknown) => void;
+}
+
+interface Parameter {
+  name: string;
+  in: string;
+  schema?: { type?: string };
+  description?: string;
 }
 
 const ParameterList = memo<{
-  parameters: any[];
+  parameters: Parameter[];
   darkMode: boolean;
 }>(({ parameters }) => {
   if (parameters.length === 0) return null;
@@ -29,7 +36,7 @@ const ParameterList = memo<{
         Parameters:
       </Text>
       <Box pl={2}>
-        {parameters.map((param: any, idx: number) => (
+        {parameters.map((param: Parameter, idx: number) => (
           <Box key={idx} display="flex" alignItems="center" fontSize="xs" mb={1}>
             <Text as="span" fontWeight="bold" color="teal.300" minW="60px">
               {param.name}
@@ -52,8 +59,13 @@ const ParameterList = memo<{
 
 ParameterList.displayName = 'ParameterList';
 
+interface RequestBody {
+  description?: string;
+  content?: Record<string, { schema?: unknown }>;
+}
+
 const RequestBodySection = memo<{
-  requestBody: any;
+  requestBody: RequestBody | undefined;
   openApi: OpenAPISpec;
   darkMode: boolean;
 }>(({ requestBody, openApi, darkMode }) => {
@@ -69,7 +81,7 @@ const RequestBodySection = memo<{
       </Text>
       {requestBody.content && (
         <Box pl={2}>
-          {Object.entries(requestBody.content).map(([_type, content]: any, idx) => {
+          {Object.entries(requestBody.content).map(([, content], idx) => {
             const sample = content.schema ? generateSampleFromSchema(content.schema, openApi) : null;
             return sample ? (
               <Box key={idx}>
@@ -105,13 +117,13 @@ RequestBodySection.displayName = 'RequestBodySection';
 
 const SelectAllButton = memo<{
   typeName: string;
-  sample: any;
+  sample: unknown;
   selectedAttrs: SelectedAttributes;
-  onSelectAllAttrs: (typeName: string, sample: any) => void;
+  onSelectAllAttrs: (typeName: string, sample: unknown) => void;
   darkMode: boolean;
 }>(({ typeName, sample, selectedAttrs, onSelectAllAttrs, darkMode }) => {
   const allPaths = useMemo(() => collectPaths(sample), [sample]);
-  const typeAttrs = selectedAttrs[typeName] || {};
+  const typeAttrs = useMemo(() => selectedAttrs[typeName] || {}, [selectedAttrs, typeName]);
   const allSelected = useMemo(() => 
     allPaths.length > 0 && allPaths.every(path => typeAttrs[path]),
     [allPaths, typeAttrs]
@@ -138,6 +150,10 @@ const SelectAllButton = memo<{
 
 SelectAllButton.displayName = 'SelectAllButton';
 
+interface Response {
+  content?: Record<string, { schema?: unknown }>;
+}
+
 export const MethodDetails: React.FC<MethodDetailsProps> = memo(({ 
   details, 
   openApi, 
@@ -148,11 +164,10 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
 }) => {
   const parameters = details.parameters || [];
   const requestBody = details.requestBody;
-  const responses = details.responses || {};
-  const successResponses = useMemo(() => 
-    Object.entries(responses).filter(([code]) => /^2\d\d$/.test(code)),
-    [responses]
-  );
+  const successResponses = useMemo(() => {
+    const responses = details.responses || {};
+    return Object.entries(responses).filter(([code]) => /^2\d\d$/.test(code));
+  }, [details.responses]);
 
   return (
     <Box pl={4} mt={1} mb={2}>
@@ -165,20 +180,20 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
             Responses:
           </Text>
           <Box pl={2}>
-            {successResponses.map(([code, resp]: any, _idx) => {
-              const respObj = resp as any;
+            {successResponses.map(([code, resp], idx) => {
+              const respObj = resp as Response;
               if (!respObj.content) return null;
               
-              return Object.entries(respObj.content as any).map(([type, content]: any, j) => {
-                const contentObj = content as any;
+              return Object.entries(respObj.content).map(([type, content], j) => {
+                const contentObj = content as { schema?: unknown };
                 if (!type.includes('json') || !contentObj.schema) return null;
                 
                 const sample = generateSampleFromSchema(contentObj.schema, openApi);
                 if (!sample) return null;
                 
                 let typeName: string;
-                if (contentObj.schema.$ref) {
-                  typeName = contentObj.schema.$ref.replace('#/components/schemas/', '');
+                if (typeof contentObj.schema === 'object' && contentObj.schema && '$ref' in contentObj.schema) {
+                  typeName = (contentObj.schema.$ref as string).replace('#/components/schemas/', '');
                 } else if (details.operationId) {
                   typeName = details.operationId + '_' + code;
                 } else {
@@ -186,7 +201,7 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
                 }
                 
                 return (
-                  <Box key={j} mb={3}>
+                  <Box key={`${idx}-${j}`} mb={3}>
                     <Text fontSize="xs" fontWeight="bold" color="purple.400" mb={1}>
                       {typeName}
                     </Text>

@@ -17,7 +17,10 @@ vi.mock('../lib/appConfig/configGenerator', () => ({
 }));
 
 // Wrapper function to provide SettingsProvider context
-const renderHookWithSettings = (hookFn: any, options?: any) => {
+const renderHookWithSettings = <TProps, TResult>(
+  hookFn: (props: TProps) => TResult, 
+  options?: { initialProps?: TProps }
+) => {
   return renderHook(hookFn, {
     ...options,
     wrapper: ({ children }: { children: React.ReactNode }) => {
@@ -68,7 +71,7 @@ describe('useGraphQLGeneration', () => {
 
     it('should recalculate when selectedAttrs change', () => {
       const { result, rerender } = renderHookWithSettings(
-        ({ selectedAttrs }) => useGraphQLGeneration(null, selectedAttrs, {}),
+        ({ selectedAttrs }: { selectedAttrs: SelectedAttributes }) => useGraphQLGeneration(null, selectedAttrs, {}),
         { initialProps: { selectedAttrs: {} } }
       );
 
@@ -173,7 +176,7 @@ describe('useGraphQLGeneration', () => {
         .mockReturnValueOnce(schema2);
 
       const { result, rerender } = renderHookWithSettings(
-        ({ selectedAttrs }) => useGraphQLGeneration(mockOpenApi, selectedAttrs, {}),
+        ({ selectedAttrs }: { selectedAttrs: SelectedAttributes }) => useGraphQLGeneration(mockOpenApi, selectedAttrs, {}),
         { initialProps: { selectedAttrs: initialSelectedAttrs } }
       );
 
@@ -331,12 +334,12 @@ describe('useGraphQLGeneration', () => {
       };
 
       const { result, rerender } = renderHookWithSettings(
-        ({ openApi }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
+        ({ openApi }: { openApi: OpenAPISpec }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
         { initialProps: { openApi: openApi1 } }
       );
 
       // Debug: log the actual result
-      console.log('Result:', result.current);
+      // console.log('Result:', result.current);
       
       // expect(result.current?.appConfigYaml).toBe('# Application config YAML will appear here\n');
       expect(vi.mocked(generateAppConfigYaml)).toHaveBeenCalledWith(openApi1, {});
@@ -382,7 +385,7 @@ describe('useGraphQLGeneration', () => {
       vi.mocked(generateAppConfigYaml).mockReturnValue('config');
 
       const { rerender } = renderHookWithSettings(
-        ({ openApi, selectedAttrs }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
+        ({ openApi, selectedAttrs }: { openApi: OpenAPISpec; selectedAttrs: SelectedAttributes }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
         { initialProps: { openApi: mockOpenApi, selectedAttrs } }
       );
 
@@ -460,7 +463,7 @@ describe('useGraphQLGeneration', () => {
       vi.mocked(generateAppConfigYaml).mockReturnValue('updated config');
 
       const { result, rerender } = renderHookWithSettings(
-        ({ openApi, selectedAttrs }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
+        ({ openApi, selectedAttrs }: { openApi: OpenAPISpec; selectedAttrs: SelectedAttributes }) => useGraphQLGeneration(openApi, selectedAttrs, {}),
         { initialProps: { openApi: openApi1, selectedAttrs: selectedAttrs1 } }
       );
 

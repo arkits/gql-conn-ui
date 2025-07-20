@@ -2,14 +2,15 @@ import React, { useState } from "react";
 import { Box, VStack, HStack, Text } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { MethodDetails } from "./MethodDetails";
+import type { OpenAPISpec, SelectedAttributes, TreeNode } from '../types/openapi';
 
 export interface TreeViewProps {
-  tree: any[];
-  openApi: any;
+  tree: TreeNode[];
+  openApi: OpenAPISpec | null;
   darkMode: boolean;
-  selectedAttrs: Record<string, Record<string, boolean>>;
+  selectedAttrs: SelectedAttributes;
   onAttrToggle: (typeName: string, path: string[], endpointPath?: string, endpointMethod?: string) => void;
-  onSelectAllAttrs: (typeName: string, sample: any, endpointPath?: string, endpointMethod?: string) => void;
+  onSelectAllAttrs: (typeName: string, sample: unknown, endpointPath?: string, endpointMethod?: string) => void;
 }
 
 export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, selectedAttrs, onAttrToggle, onSelectAllAttrs }) => {
@@ -39,14 +40,14 @@ export const TreeView: React.FC<TreeViewProps> = ({ tree, openApi, darkMode, sel
           </HStack>
           {expandedEndpoints[node.path] && (
             <VStack align="start" pl={4} gap={1}>
-              {node.methods.map((m: any, j: number) => (
+              {node.methods.map((m, j: number) => (
                 <Box key={j}>
                   <HStack gap={2} cursor="pointer" onClick={() => toggleMethod(node.path, m.method)}>
                     {expandedMethods[node.path]?.[m.method] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     <Text fontSize="sm" color="purple.500">{m.method}</Text>
                     <Text fontSize="sm">{m.details.summary || ""}</Text>
                   </HStack>
-                  {expandedMethods[node.path]?.[m.method] && (
+                  {expandedMethods[node.path]?.[m.method] && openApi && (
                     <MethodDetails
                       details={m.details}
                       openApi={openApi}

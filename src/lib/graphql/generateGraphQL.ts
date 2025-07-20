@@ -24,7 +24,7 @@ export function generateGraphQLSchemaFromSelections(
     input: {}
   };
 
-  const queryFields: GraphQLFieldConfigMap<any, any> = {};
+  const queryFields: GraphQLFieldConfigMap<unknown, unknown> = {};
   const queryDirectives: Record<string, { path: string; method: string; selection: string[] }> = {};
 
   // Process only selected operations

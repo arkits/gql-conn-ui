@@ -4,7 +4,10 @@ import type {
   OpenAPIOperation, 
   SelectedAttributes,
   OpenAPIResponse,
-  OpenAPIMediaType 
+  OpenAPIMediaType,
+  OpenAPIParameter,
+  OpenAPIRequestBody,
+  OpenAPISchema
 } from '../../types/openapi';
 import type { TypeMaps, GraphQLOperationResult } from './types';
 import { hasRef, getRefName, isSuccessResponse, generateOperationId } from './utils';
@@ -63,7 +66,7 @@ export function processOperation(
   return null;
 }
 
-function determineTypeName(schema: any, operationId: string, code: string): string {
+function determineTypeName(schema: OpenAPISchema, operationId: string, code: string): string {
   if (schema.$ref) {
     return getRefName(schema.$ref);
   }
@@ -74,7 +77,7 @@ function determineTypeName(schema: any, operationId: string, code: string): stri
 }
 
 function buildResponseType(
-  schema: any,
+  schema: OpenAPISchema,
   typeName: string,
   openApi: OpenAPISpec,
   selectedAttrs: SelectedAttributes,
@@ -82,15 +85,15 @@ function buildResponseType(
 ): GraphQLOutputType {
   if (schema.type === 'array') {
     let itemTypeName = typeName.replace(/s$/, '');
-    if (hasRef(schema.items)) {
+    if (hasRef(schema.items) && schema.items) {
       itemTypeName = getRefName(schema.items.$ref);
     }
     return new GraphQLList(
-      buildObjectType(itemTypeName, schema.items, openApi, selectedAttrs, itemTypeName, [], typeMaps) as any
+      buildObjectType(itemTypeName, schema.items || {}, openApi, selectedAttrs, itemTypeName, [], typeMaps) as GraphQLOutputType
     );
   }
 
-  return buildObjectType(typeName, schema, openApi, selectedAttrs, typeName, [], typeMaps) as any;
+  return buildObjectType(typeName, schema, openApi, selectedAttrs, typeName, [], typeMaps) as GraphQLOutputType;
 }
 
 function sanitizeGraphQLName(name: string): string {
@@ -104,8 +107,8 @@ function sanitizeGraphQLName(name: string): string {
 }
 
 function buildOperationArgs(
-  parameters: any[],
-  requestBody: any,
+  parameters: OpenAPIParameter[],
+  requestBody: OpenAPIRequestBody | undefined,
   operationId: string,
   openApi: OpenAPISpec,
   typeMaps: TypeMaps

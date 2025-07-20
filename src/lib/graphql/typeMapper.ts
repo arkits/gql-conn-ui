@@ -37,17 +37,19 @@ export function mapToGraphQLOutputType(
   }
 
   switch (schema.type) {
-    case 'object':
+    case 'object': {
       return buildObjectType(typeName, schema, openApi, selectedAttrs, typeName, path, typeMaps);
+    }
     
-    case 'array':
+    case 'array': {
       let itemTypeName = typeName.replace(/s$/, '');
-      if (hasRef(schema.items)) {
+      if (hasRef(schema.items) && schema.items) {
         itemTypeName = getRefName(schema.items.$ref);
       }
       return new GraphQLList(
         mapToGraphQLOutputType(schema.items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps)
       );
+    }
     
     case 'string':
       return GraphQLString;
@@ -83,13 +85,15 @@ export function mapToGraphQLInputType(
   }
 
   switch (schema.type) {
-    case 'object':
+    case 'object': {
       return buildInputType(nameHint, schema, openApi, typeMaps);
+    }
     
-    case 'array':
+    case 'array': {
       return new GraphQLList(
         mapToGraphQLInputType(schema.items, openApi, typeMaps, nameHint + 'Item')
       );
+    }
     
     case 'string':
       return GraphQLString;
@@ -117,7 +121,7 @@ export function mapParameterToGraphQLInput(
   }
   
   if (parameter.required) {
-    gqlType = new GraphQLNonNull(gqlType as any);
+    gqlType = new GraphQLNonNull(gqlType);
   }
   
   return gqlType;

@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFileUpload } from './useFileUpload';
-import yaml from 'js-yaml';
-import { parseOpenApiToTree } from '../utils/openapi';
 
 // Mock js-yaml
 vi.mock('js-yaml', () => ({
@@ -31,11 +29,6 @@ describe('useFileUpload', () => {
   });
 
   describe('handleFileUpload', () => {
-    const createMockFile = (content: string, name = 'test.json') => {
-      const file = new File([content], name, { type: 'application/json' });
-      return file;
-    };
-
     const createMockEvent = (file: File | null) => ({
       target: {
         files: file ? [file] : null
@@ -47,7 +40,7 @@ describe('useFileUpload', () => {
 
       const event = createMockEvent(null);
 
-      let uploadResult: any;
+      let uploadResult: { success: boolean; error?: string };
       await act(async () => {
         uploadResult = await result.current.handleFileUpload(event);
       });
@@ -70,9 +63,9 @@ describe('useFileUpload', () => {
         target: {
           files: [mockFile]
         }
-      } as any;
+      } as React.ChangeEvent<HTMLInputElement>;
 
-      let uploadResult: any;
+      let uploadResult: { success: boolean; error?: string };
       await act(async () => {
         uploadResult = await result.current.handleFileUpload(event);
       });

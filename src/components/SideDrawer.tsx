@@ -13,7 +13,7 @@ import {
   CloseButton,
 } from '@chakra-ui/react';
 import { Plus, Trash2 } from 'lucide-react';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings } from '../hooks/useSettings';
 
 interface SideDrawerProps {
   isOpen: boolean;

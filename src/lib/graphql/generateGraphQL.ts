@@ -68,18 +68,6 @@ function generateSchemaWithDirectives(
 ): string {
   let sdl = printSchema(schema);
 
-  // Add the @dataSource directive definition
-  const directiveDef = 'directive @dataSource(path: String!, method: String!, selection: [String!]!) on FIELD_DEFINITION';
-  if (!sdl.includes('directive @dataSource')) {
-    sdl = directiveDef + '\n\n' + sdl;
-  }
-
-  // Add the @requiredScopes directive definition
-  const requiredScopesDef = 'directive @requiredScopes(scopes: [[String!]!]!) on OBJECT';
-  if (!sdl.includes('directive @requiredScopes')) {
-    sdl = requiredScopesDef + '\n\n' + sdl;
-  }
-
   // Inject directives into query fields (only @dataSource)
   sdl = sdl.replace(/(type Query \{[\s\S]*?\n\})/, (match) => {
     return match.replace(/^(\s*)(\w+)(\([^)]*\))?\s*:\s*([^!\n]+!?)/gm, (line, indent, field, args, type) => {
@@ -104,6 +92,26 @@ function generateSchemaWithDirectives(
     const defaultScopes = '[' + requiredScopes.map(scope => `[${scope.map(s => `"${s}"`).join(', ')}]`).join(', ') + ']';
     return `type ${typeName} @requiredScopes(scopes: ${defaultScopes}) {`;
   });
+
+  // Add the directive definitions at the bottom of the schema
+  const directiveDefs = [];
+  
+  // Add the @dataSource directive definition
+  const directiveDef = 'directive @dataSource(path: String!, method: String!, selection: [String!]!) on FIELD_DEFINITION';
+  if (!sdl.includes('directive @dataSource')) {
+    directiveDefs.push(directiveDef);
+  }
+
+  // Add the @requiredScopes directive definition
+  const requiredScopesDef = 'directive @requiredScopes(scopes: [[String!]!]!) on OBJECT';
+  if (!sdl.includes('directive @requiredScopes')) {
+    directiveDefs.push(requiredScopesDef);
+  }
+
+  // Append directive definitions to the end of the schema
+  if (directiveDefs.length > 0) {
+    sdl += '\n\n' + directiveDefs.join('\n');
+  }
 
   return sdl;
 }

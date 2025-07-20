@@ -187,6 +187,9 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
                 
                 return (
                   <Box key={j} mb={3}>
+                    <Text fontSize="xs" fontWeight="bold" color="purple.400" mb={1}>
+                      {typeName}
+                    </Text>
                     <SelectAllButton
                       typeName={typeName}
                       sample={sample}
@@ -201,7 +204,7 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
                       color={darkMode ? 'gray.100' : 'gray.800'} 
                       p={2} 
                       borderRadius="md" 
-                      maxW="400px" 
+                      w="100%" 
                       overflowX="auto"
                     >
                       <JsonWithCheckboxes 

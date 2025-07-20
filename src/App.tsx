@@ -241,7 +241,6 @@ function AppContent() {
                       theme={darkMode ? "vs-dark" : "light"}
                       value={graphqlSchema}
                       options={{ 
-                        readOnly: true, 
                         minimap: { enabled: false }, 
                         scrollBeyondLastLine: true, 
                         automaticLayout: true 
@@ -280,7 +279,6 @@ function AppContent() {
                       theme={darkMode ? "vs-dark" : "light"}
                       value={appConfigYaml}
                       options={{ 
-                        readOnly: true, 
                         minimap: { enabled: false }, 
                         scrollBeyondLastLine: true, 
                         automaticLayout: true 

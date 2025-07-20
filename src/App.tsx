@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Box, Flex, Heading, HStack, Input, IconButton } from "@chakra-ui/react";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Menu } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
+import { SideDrawer } from "./components/SideDrawer";
+import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useSelection } from "./hooks/useSelection";
 import { useGraphQLGeneration } from "./hooks/useGraphQLGeneration";
 
-function App() {
+function AppContent() {
   const [darkMode, setDarkMode] = useState(true);
+  const { isDrawerOpen, setIsDrawerOpen } = useSettings();
   
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "light";
@@ -88,17 +91,28 @@ function App() {
                 p={1}
               />
             </HStack>
-            <IconButton
-              aria-label="Toggle dark mode"
-              onClick={() => setDarkMode((d) => !d)}
-              variant="ghost"
-              size="md"
-              color={darkMode ? 'yellow.300' : 'gray.700'}
-              _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-              ml={2}
-            >
-              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </IconButton>
+            <HStack gap={2}>
+              <IconButton
+                aria-label="Toggle dark mode"
+                onClick={() => setDarkMode((d) => !d)}
+                variant="ghost"
+                size="md"
+                color={darkMode ? 'yellow.300' : 'gray.700'}
+                _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </IconButton>
+              <IconButton
+                aria-label="Open settings"
+                onClick={() => setIsDrawerOpen(true)}
+                variant="ghost"
+                size="md"
+                color={darkMode ? 'gray.300' : 'gray.700'}
+                _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
+              >
+                <Menu size={20} />
+              </IconButton>
+            </HStack>
           </Flex>
         </Flex>
         
@@ -278,8 +292,23 @@ function App() {
             </TabsRoot>
           </Box>
         </Flex>
+        
+        {/* SideDrawer */}
+        <SideDrawer 
+          isOpen={isDrawerOpen} 
+          onClose={() => setIsDrawerOpen(false)} 
+          darkMode={darkMode} 
+        />
       </Flex>
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
   );
 }
 

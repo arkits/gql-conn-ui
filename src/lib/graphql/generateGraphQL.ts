@@ -11,7 +11,8 @@ import { processOperation } from './operationProcessor';
 
 export function generateGraphQLSchemaFromSelections(
   openApi: OpenAPISpec,
-  selectedAttrs: SelectedAttributes
+  selectedAttrs: SelectedAttributes,
+  requiredScopes: string[][] = [["test"]]
 ): string {
   if (!openApi) return '';
 
@@ -56,13 +57,14 @@ export function generateGraphQLSchemaFromSelections(
     query: QueryType
   });
 
-  return generateSchemaWithDirectives(schema, [], queryDirectives);
+  return generateSchemaWithDirectives(schema, [], queryDirectives, requiredScopes);
 }
 
 function generateSchemaWithDirectives(
   schema: GraphQLSchema,
   _comments: string[], // unused now
-  queryDirectives: Record<string, { path: string; method: string; selection: string[] }>
+  queryDirectives: Record<string, { path: string; method: string; selection: string[] }>,
+  requiredScopes: string[][]
 ): string {
   let sdl = printSchema(schema);
 
@@ -72,7 +74,13 @@ function generateSchemaWithDirectives(
     sdl = directiveDef + '\n\n' + sdl;
   }
 
-  // Inject directives into query fields
+  // Add the @requiredScopes directive definition
+  const requiredScopesDef = 'directive @requiredScopes(scopes: [[String!]!]!) on OBJECT';
+  if (!sdl.includes('directive @requiredScopes')) {
+    sdl = requiredScopesDef + '\n\n' + sdl;
+  }
+
+  // Inject directives into query fields (only @dataSource)
   sdl = sdl.replace(/(type Query \{[\s\S]*?\n\})/, (match) => {
     return match.replace(/^(\s*)(\w+)(\([^)]*\))?\s*:\s*([^!\n]+!?)/gm, (line, indent, field, args, type) => {
       if (queryDirectives[field]) {
@@ -82,6 +90,19 @@ function generateSchemaWithDirectives(
       }
       return line;
     });
+  });
+
+  // Apply @requiredScopes directive to type definitions
+  // Find all type definitions and add the directive
+  sdl = sdl.replace(/(type\s+(\w+)\s*\{)/g, (match, typeDef, typeName) => {
+    // Skip the Query type
+    if (typeName === 'Query') {
+      return match;
+    }
+    
+    // Add @requiredScopes directive with default scopes
+    const defaultScopes = '[' + requiredScopes.map(scope => `[${scope.map(s => `"${s}"`).join(', ')}]`).join(', ') + ']';
+    return `type ${typeName} @requiredScopes(scopes: ${defaultScopes}) {`;
   });
 
   return sdl;

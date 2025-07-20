@@ -173,6 +173,38 @@ describe('GraphQL Schema Generator', () => {
       // Should NOT have a doc comment above type Query
       expect(result).not.toMatch(/"""[^"]+"""\s*type Query/);
     });
+
+    it('should apply @requiredScopes directive to type definitions but not Query type', () => {
+      const selectedAttrs: SelectedAttributes = {
+        User: { id: true, name: true },
+        Profile: { bio: true }
+      };
+      const result = generateGraphQLSchemaFromSelections(mockOpenApi, selectedAttrs);
+      
+      // Should have @requiredScopes directive definition
+      expect(result).toContain('directive @requiredScopes(scopes: [[String!]!]!) on OBJECT');
+      
+      // Should apply @requiredScopes to User type
+      expect(result).toContain('type User @requiredScopes(scopes: [["test"]]) {');
+      
+      // Should apply @requiredScopes to Profile type
+      expect(result).toContain('type Profile @requiredScopes(scopes: [["test"]]) {');
+      
+      // Should NOT apply @requiredScopes to Query type
+      expect(result).toContain('type Query {');
+      expect(result).not.toContain('type Query @requiredScopes');
+    });
+
+    it('should use custom requiredScopes when provided', () => {
+      const selectedAttrs: SelectedAttributes = {
+        User: { id: true, name: true }
+      };
+      const customScopes = [['read:users'], ['write:users', 'admin']];
+      const result = generateGraphQLSchemaFromSelections(mockOpenApi, selectedAttrs, customScopes);
+      
+      // Should apply custom scopes to User type
+      expect(result).toContain('type User @requiredScopes(scopes: [["read:users"], ["write:users", "admin"]]) {');
+    });
   });
 
   describe('edge cases', () => {

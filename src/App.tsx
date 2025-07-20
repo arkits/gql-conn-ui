@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Flex, Heading, HStack, Input, IconButton } from "@chakra-ui/react";
-import { Sun, Moon, Menu } from "lucide-react";
+import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -12,10 +12,12 @@ import { useSettings } from "./hooks/useSettings";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useSelection } from "./hooks/useSelection";
 import { useGraphQLGeneration } from "./hooks/useGraphQLGeneration";
+import { Dialog, CloseButton } from "@chakra-ui/react";
 
 function AppContent() {
   const [darkMode, setDarkMode] = useState(true);
   const { isDrawerOpen, setIsDrawerOpen } = useSettings();
+  const [helpOpen, setHelpOpen] = useState(false);
   
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "light";
@@ -103,6 +105,55 @@ function AppContent() {
               >
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </IconButton>
+              <Dialog.Root open={helpOpen} onOpenChange={o => setHelpOpen(o.open)}>
+                <Dialog.Trigger asChild>
+                  <IconButton
+                    aria-label="Help"
+                    variant="ghost"
+                    size="md"
+                    color={darkMode ? 'teal.200' : 'teal.700'}
+                    _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
+                  >
+                    <HelpCircle size={20} />
+                  </IconButton>
+                </Dialog.Trigger>
+                <Dialog.Backdrop />
+                <Dialog.Positioner>
+                  <Dialog.Content bg={darkMode ? 'gray.800' : 'white'} color={darkMode ? 'gray.100' : 'gray.900'} maxW="xl">
+                    <Dialog.Header>
+                      <Dialog.Title>Help & Documentation</Dialog.Title>
+                      <Dialog.CloseTrigger asChild>
+                        <CloseButton position="absolute" right={2} top={2} />
+                      </Dialog.CloseTrigger>
+                    </Dialog.Header>
+                    <Dialog.Body>
+                      <Box as="section" fontSize="sm" lineHeight={1.7}>
+                        <Heading size="sm" mb={2} color="teal.400">What is this app?</Heading>
+                        <Box mb={3}>
+                          This tool converts an OpenAPI (Swagger) specification into a GraphQL schema and a YAML app config. It helps you visualize, select, and transform REST endpoints into GraphQL operations.
+                        </Box>
+                        <Heading size="xs" mb={1} color="purple.400">How to use:</Heading>
+                        <ol style={{ paddingLeft: 18, marginBottom: 12 }}>
+                          <li><b>Upload OpenAPI:</b> Click the file input to upload a <code>.json</code> or <code>.yaml</code> OpenAPI spec.</li>
+                          <li><b>Explore Endpoints:</b> The left panel shows a tree of endpoints and schemas. Expand and select fields to include in your GraphQL schema.</li>
+                          <li><b>Schema & Config:</b> The right panel has tabs for the generated GraphQL schema and the YAML app config. Both update live as you select endpoints/fields.</li>
+                          <li><b>Settings:</b> Use the settings (menu) button to configure required scopes and other options.</li>
+                          <li><b>Dark Mode:</b> Toggle dark/light mode with the sun/moon button.</li>
+                        </ol>
+                        <Heading size="xs" mb={1} color="purple.400">Tips:</Heading>
+                        <ul style={{ paddingLeft: 18, marginBottom: 12 }}>
+                          <li>You can select/deselect all fields for a type using the "Select All" button in the tree or method details.</li>
+                          <li>Changes are instant; no need to save manually.</li>
+                          <li>Use the settings drawer to adjust advanced options.</li>
+                        </ul>
+                        <Box mt={2} color="gray.400" fontSize="xs">
+                          For more info, see the README or contact the developer.
+                        </Box>
+                      </Box>
+                    </Dialog.Body>
+                  </Dialog.Content>
+                </Dialog.Positioner>
+              </Dialog.Root>
               <IconButton
                 aria-label="Open settings"
                 onClick={() => setIsDrawerOpen(true)}

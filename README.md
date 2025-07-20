@@ -1,69 +1,66 @@
-# React + TypeScript + Vite
+# OpenAPI → GraphQL Converter
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern web app to convert OpenAPI (Swagger) specifications into GraphQL schemas and YAML app configs. Visualize, select, and transform REST endpoints into GraphQL operations with a beautiful, responsive UI.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **OpenAPI Upload:** Supports `.json`, `.yaml`, and `.yml` OpenAPI specs.
+- **Tree View:** Explore endpoints and schemas in an interactive tree. Select/deselect fields and endpoints.
+- **Live GraphQL Schema:** Instantly generates a GraphQL schema based on your selections.
+- **App Config YAML:** Generates a YAML app config alongside the schema.
+- **Dark Mode:** Beautiful dark mode enabled by default.
+- **Settings Drawer:** Configure advanced options and required scopes.
+- **Help & Documentation:** Built-in help dialog for quick onboarding.
+- **Error Boundaries:** Robust error handling for a smooth experience.
 
-## Expanding the ESLint configuration
+## Usage
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Install dependencies:**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+2. **Start the app:**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+3. **Open in browser:**
+   Visit [http://localhost:5173](http://localhost:5173) (or the port shown in your terminal).
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+4. **Upload an OpenAPI spec:**
+   - Click the file input in the header to upload your `.json` or `.yaml` OpenAPI file.
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+5. **Explore and select:**
+   - Use the left panel to browse endpoints and schemas. Select/deselect fields as needed.
+   - Use "Select All" to quickly select/deselect all fields for a type.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+6. **View generated output:**
+   - The right panel has tabs for the GraphQL schema and YAML app config. Both update live as you make selections.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+7. **Settings & Help:**
+   - Use the menu button to open settings. Use the help button for documentation.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Tech Stack
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **React** + **TypeScript** (with strict type safety)
+- **Vite** for fast development
+- **Chakra UI** for accessible, themeable components
+- **Monaco Editor** for code and YAML editing
+- **Lucide Icons** for modern iconography
+
+## Development
+
+- Code style: See `.eslintrc` and workspace rules for strict TypeScript and modern JS best practices.
+- UI: Chakra UI with dark mode as default. Monaco Editor for all code editing.
+- Types: No `any` or enums; strict types and utility types throughout.
+
+## Contributing
+
+Pull requests and issues are welcome! Please follow the code style and add tests for new features.
+
+## License
+
+MIT

@@ -5,14 +5,16 @@ export function enrichSelectedAttributes(
   selectedAttrs: SelectedAttributes,
   openApi: OpenAPISpec
 ): SelectedAttributes {
+  // Only enrich attributes that are explicitly selected (true)
   const enriched: SelectedAttributes = JSON.parse(JSON.stringify(selectedAttrs));
 
   for (const [typeName, attrs] of Object.entries(selectedAttrs)) {
     const schema = openApi.components?.schemas?.[typeName];
     if (!schema) continue;
 
-    for (const attrPath of Object.keys(attrs)) {
-      if (attrPath.includes('.')) {
+    for (const [attrPath, isSelected] of Object.entries(attrs)) {
+      // Only process attributes that are explicitly selected
+      if (isSelected && attrPath.includes('.')) {
         const pathSegments = attrPath.split('.');
         addSelectedAttrForReference(schema, pathSegments, enriched, openApi, typeName);
       }
@@ -218,8 +220,9 @@ function mergeEnrichedAttributes(enriched: SelectedAttributes): SelectedAttribut
   
   for (const [typeName, attrs] of Object.entries(enriched)) {
     if (!merged[typeName]) merged[typeName] = {};
-    for (const key of Object.keys(attrs)) {
-      merged[typeName][key] = true;
+    for (const [key, value] of Object.entries(attrs)) {
+      // Preserve the original selection state
+      merged[typeName][key] = value;
     }
   }
   

@@ -21,8 +21,8 @@ function AppContent() {
   }, [darkMode]);
 
   const { openApi, openApiTree, handleFileUpload } = useFileUpload();
-  const { selectedAttrs, handleAttrToggle, handleSelectAllAttrs, clearSelection } = useSelection();
-  const { graphqlSchema, appConfigYaml } = useGraphQLGeneration(openApi, selectedAttrs);
+  const { selectedAttrs, selectedEndpoints, handleAttrToggle, handleSelectAllAttrs, clearSelection } = useSelection();
+  const { graphqlSchema, appConfigYaml } = useGraphQLGeneration(openApi, selectedAttrs, selectedEndpoints);
 
   const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const result = await handleFileUpload(e);

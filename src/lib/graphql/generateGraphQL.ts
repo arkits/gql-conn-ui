@@ -4,7 +4,7 @@ import {
   printSchema,
   type GraphQLFieldConfigMap
 } from 'graphql';
-import type { OpenAPISpec, SelectedAttributes } from '../../types/openapi';
+import type { OpenAPISpec, SelectedAttributes, SelectedEndpoints } from '../../types/openapi';
 import type { TypeMaps } from './types';
 import { enrichSelectedAttributes } from './selectionEnricher';
 import { processOperation } from './operationProcessor';
@@ -12,6 +12,7 @@ import { processOperation } from './operationProcessor';
 export function generateGraphQLSchemaFromSelections(
   openApi: OpenAPISpec,
   selectedAttrs: SelectedAttributes,
+  selectedEndpoints: SelectedEndpoints = {},
   requiredScopes: string[][] = [["test"]]
 ): string {
   if (!openApi) return '';
@@ -26,21 +27,28 @@ export function generateGraphQLSchemaFromSelections(
   const queryFields: GraphQLFieldConfigMap<any, any> = {};
   const queryDirectives: Record<string, { path: string; method: string; selection: string[] }> = {};
 
-  // Process all operations
-  for (const [path, methods] of Object.entries(openApi.paths || {})) {
-    for (const [method, details] of Object.entries(methods as any)) {
-      const result = processOperation(path, method, details as any, openApi, enrichedAttrs, typeMaps);
+  // Process only selected operations
+  for (const [, endpointSelection] of Object.entries(selectedEndpoints)) {
+    const { path, method } = endpointSelection;
+    
+    // Find the operation in the OpenAPI spec
+    const methods = openApi.paths?.[path];
+    if (!methods) continue;
+    
+    const details = methods[method.toLowerCase()];
+    if (!details) continue;
+
+    const result = processOperation(path, method.toLowerCase(), details, openApi, enrichedAttrs, typeMaps);
+    
+    if (result) {
+      queryFields[result.operationId] = {
+        type: result.gqlType,
+        args: result.args,
+        resolve: () => ({}), // dummy resolver for SDL
+        description: result.description
+      };
       
-      if (result) {
-        queryFields[result.operationId] = {
-          type: result.gqlType,
-          args: result.args,
-          resolve: () => ({}), // dummy resolver for SDL
-          description: result.description
-        };
-        
-        queryDirectives[result.operationId] = result.directive;
-      }
+      queryDirectives[result.operationId] = result.directive;
     }
   }
 
@@ -82,7 +90,7 @@ function generateSchemaWithDirectives(
 
   // Apply @requiredScopes directive to type definitions
   // Find all type definitions and add the directive
-  sdl = sdl.replace(/(type\s+(\w+)\s*\{)/g, (match, typeDef, typeName) => {
+  sdl = sdl.replace(/(type\s+(\w+)\s*\{)/g, (match, _typeDef, typeName) => {
     // Skip the Query type
     if (typeName === 'Query') {
       return match;

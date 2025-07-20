@@ -58,6 +58,15 @@ export interface TreeMethod {
 
 export type SelectedAttributes = Record<string, Record<string, boolean>>;
 
+export interface EndpointSelection {
+  path: string;
+  method: string;
+  typeName: string;
+  selectedAttrs: Record<string, boolean>;
+}
+
+export type SelectedEndpoints = Record<string, EndpointSelection>;
+
 export interface GraphQLDirective {
   path: string;
   method: string;

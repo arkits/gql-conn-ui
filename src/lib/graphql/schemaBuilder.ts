@@ -73,8 +73,25 @@ export function buildObjectType(
     if (hasRef(schema.items) && schema.items) {
       itemTypeName = getRefName(schema.items.$ref);
     }
+    // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
+    const parentSelected = selectedAttrs[typeName] || {};
+    const itemSelectedAttrs: Record<string, boolean> = {};
+    for (const key in parentSelected) {
+      if (key.startsWith('0.')) {
+        itemSelectedAttrs[key.slice(2)] = parentSelected[key];
+      }
+    }
+    const normalizedSelectedAttrs = { ...selectedAttrs, [itemTypeName]: itemSelectedAttrs };
     return new GraphQLList(
-      buildObjectType(itemTypeName, schema.items || {}, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps) as GraphQLObjectType
+      buildObjectType(
+        itemTypeName,
+        schema.items || {},
+        openApi,
+        normalizedSelectedAttrs,
+        itemTypeName,
+        [...path, '0'],
+        typeMaps
+      ) as GraphQLObjectType
     );
   }
 
@@ -185,8 +202,17 @@ function mapToGraphQLOutputTypeInternal(
       if (hasRef(schema.items) && schema.items) {
         itemTypeName = getRefName(schema.items.$ref);
       }
+      // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
+      const parentSelected = selectedAttrs[typeName] || {};
+      const itemSelectedAttrs: Record<string, boolean> = {};
+      for (const key in parentSelected) {
+        if (key.startsWith('0.')) {
+          itemSelectedAttrs[key.slice(2)] = parentSelected[key];
+        }
+      }
+      const normalizedSelectedAttrs = { ...selectedAttrs, [itemTypeName]: itemSelectedAttrs };
       return new GraphQLList(
-        mapToGraphQLOutputTypeInternal(schema.items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps)
+        mapToGraphQLOutputTypeInternal(schema.items, openApi, normalizedSelectedAttrs, itemTypeName, [...path, '0'], typeMaps)
       );
     }
     

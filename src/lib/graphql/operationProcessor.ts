@@ -10,7 +10,7 @@ import type {
   OpenAPISchema
 } from '../../types/openapi';
 import type { TypeMaps, GraphQLOperationResult } from './types';
-import { hasRef, getRefName, isSuccessResponse, generateOperationId, capitalizeTypeName, singularizeAndCapitalize } from './utils';
+import { hasRef, getRefName, isSuccessResponse, generateOperationId, singularizeAndCapitalize } from './utils';
 import { mapToGraphQLInputType, mapParameterToGraphQLInput } from './typeMapper';
 import { buildObjectType } from './schemaBuilder';
 
@@ -97,7 +97,11 @@ function buildResponseType(
   if (schema.type === 'array') {
     let itemTypeName = singularizeAndCapitalize(typeName);
     if (hasRef(schema.items) && schema.items) {
-      itemTypeName = getRefName(schema.items.$ref);
+      if ('$ref' in schema.items && typeof schema.items.$ref === 'string') {
+        itemTypeName = getRefName(schema.items.$ref);
+      } else if ('$$ref' in schema.items && typeof schema.items.$$ref === 'string') {
+        itemTypeName = getRefName(schema.items.$$ref);
+      }
     }
     // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
     const parentSelected = selectedAttrs[typeName] || {};

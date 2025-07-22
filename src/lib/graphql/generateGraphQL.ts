@@ -75,7 +75,7 @@ function generateSchemaWithDirectives(
   let sdl = printSchema(schema);
 
   // Add type comments with OpenAPI type names and descriptions
-  sdl = sdl.replace(/(type\s+(\w+)\s*(?:@\w+[^{]*)?\{)/g, (match, typeDef, typeName) => {
+  sdl = sdl.replace(/(type\s+(\w+)\s*(?:@\w+[^{]*)?\{)/g, (match, _typeDef, typeName) => {
     if (typeName === 'Query') return match;
     
     // Look up the type in the OpenAPI schema

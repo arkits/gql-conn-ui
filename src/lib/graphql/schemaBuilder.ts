@@ -244,7 +244,7 @@ export function buildObjectType(
     // IMPORTANT: Also check for selections that match the typeName pattern
     // For arrays like DepositHistory, we need to look for patterns like "depositHistory.0.fieldName"
     const typeNameLower = typeName.toLowerCase();
-    for (const [fullPath, value] of Object.entries(selectedAttrs)) {
+    for (const [fullPath] of Object.entries(selectedAttrs)) {
       if (fullPath !== typeName && fullPath !== itemTypeName) {
         const attrs = selectedAttrs[fullPath] || {};
         for (const [attrPath, attrValue] of Object.entries(attrs)) {
@@ -535,7 +535,7 @@ function mapToGraphQLOutputTypeInternal(
       // IMPORTANT: Also check for selections that match the typeName pattern
       // For arrays like DepositHistory, we need to look for patterns like "depositHistory.0.fieldName"
       const typeNameLower = typeName.toLowerCase();
-      for (const [fullPath, value] of Object.entries(selectedAttrs)) {
+      for (const [fullPath] of Object.entries(selectedAttrs)) {
         if (fullPath !== typeName && fullPath !== itemTypeName) {
           const attrs = selectedAttrs[fullPath] || {};
           for (const [attrPath, attrValue] of Object.entries(attrs)) {

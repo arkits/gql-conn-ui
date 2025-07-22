@@ -35,6 +35,9 @@ vi.mock('./utils', () => ({
     return null;
   }),
   getRefName: vi.fn((ref) => ref.replace('#/components/schemas/', '')),
+  getPreferredName: vi.fn((schema) => schema && schema.preferredName ? schema.preferredName : undefined),
+  singularizeAndCapitalize: vi.fn((typeName) => typeName.replace(/s$/, '').charAt(0).toUpperCase() + typeName.replace(/s$/, '').slice(1)),
+  capitalizeTypeName: vi.fn((name) => name.charAt(0).toUpperCase() + name.slice(1)),
 }));
 
 const mockOpenApi = {

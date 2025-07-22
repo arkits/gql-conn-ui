@@ -150,8 +150,26 @@ const SelectAllButton = memo<{
 
 SelectAllButton.displayName = 'SelectAllButton';
 
+interface OpenAPISchema {
+  type?: string;
+  properties?: Record<string, OpenAPISchema>;
+  items?: OpenAPISchema;
+  $ref?: string;
+  $$ref?: string;
+  required?: string[];
+  description?: string;
+  allOf?: OpenAPISchema[];
+  xml?: {
+    name?: string;
+    wrapped?: boolean;
+  };
+}
+
+
 interface Response {
-  content?: Record<string, { schema?: unknown }>;
+  content?: Record<string, { schema?: OpenAPISchema }>;
+  description?: string;
+  headers?: Record<string, { description?: string; schema?: OpenAPISchema; $ref?: string }>;
 }
 
 export const MethodDetails: React.FC<MethodDetailsProps> = memo(({ 
@@ -169,6 +187,43 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
     return Object.entries(responses).filter(([code]) => /^2\d\d$/.test(code));
   }, [details.responses]);
 
+  const getTypeName = useCallback((schema: OpenAPISchema | undefined, baseTypeName?: string): string => {
+    if (!schema || typeof schema !== 'object') return baseTypeName || 'UnknownType';
+
+    // Check for allOf reference first
+    if (schema.allOf && Array.isArray(schema.allOf)) {
+      // Try to get name from the first ref in allOf
+      for (const subSchema of schema.allOf) {
+        if (subSchema.$ref) {
+          const refName = subSchema.$ref.replace('#/components/schemas/', '');
+          return refName;
+        }
+      }
+    }
+
+    // Try getting name from $ref
+    if (schema.$ref) {
+      const refString = schema.$ref;
+      if (refString.includes('#/components/schemas/')) {
+        return refString.split('#/components/schemas/')[1];
+      }
+      return refString.replace('#/components/schemas/', '');
+    }
+
+    // Try getting name from $$ref
+    if (schema.$$ref) {
+      const match = schema.$$ref.match(/\/components\/schemas\/([^/]+)/);
+      if (match) return match[1];
+    }
+
+    // Try xml name
+    if (schema.xml?.name) {
+      return schema.xml.name;
+    }
+
+    return baseTypeName || 'UnknownType';
+  }, []);
+
   return (
     <Box pl={4} mt={1} mb={2}>
       <ParameterList parameters={parameters} darkMode={darkMode} />
@@ -183,40 +238,41 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
             {successResponses.map(([code, resp], idx) => {
               const respObj = resp as Response;
               if (!respObj.content) return null;
-              
+
               return Object.entries(respObj.content).map(([type, content], j) => {
                 const contentObj = content as { schema?: unknown };
-                if (!type.includes('json') || !contentObj.schema) return null;
-                
+                if (!type.toLowerCase().includes('json') || !contentObj.schema) return null;
+
                 const sample = generateSampleFromSchema(contentObj.schema, openApi);
                 if (!sample) return null;
-                
-                let typeName: string | undefined;
-                const schemaObj = contentObj.schema as any;
-                // Prefer $ref, then $$ref, then xml.name, then fallback
-                if (schemaObj && typeof schemaObj === 'object') {
-                  if ('$ref' in schemaObj && typeof schemaObj.$ref === 'string') {
-                    typeName = schemaObj.$ref.replace('#/components/schemas/', '');
-                  } else if ('$$ref' in schemaObj && typeof schemaObj['$$ref'] === 'string') {
-                    // Try to extract the last part after /components/schemas/
-                    const match = schemaObj['$$ref'].match(/\/components\/schemas\/([^/]+)/);
-                    typeName = match ? match[1] : undefined;
-                  } else if (schemaObj.xml && typeof schemaObj.xml.name === 'string') {
-                    typeName = schemaObj.xml.name;
-                  }
-                }
-                if (!typeName && details.operationId) {
-                  typeName = details.operationId + '_' + code;
-                }
-                if (!typeName) {
-                  typeName = 'Type_' + code;
-                }
-                
+
+                const typeName = getTypeName(contentObj.schema, `${details.operationId || 'Type'}_${code}`);
+                const description = (resp as Response).description || '';
+                const headers = (resp as Response).headers;
+
                 return (
                   <Box key={`${idx}-${j}`} mb={3}>
                     <Text fontSize="xs" fontWeight="bold" color={darkMode ? 'purple.400' : 'purple.600'} mb={1}>
                       {typeName}
                     </Text>
+                    {description && (
+                      <Text fontSize="xs" color={darkMode ? 'gray.400' : 'gray.600'} mb={2}>
+                        {description}
+                      </Text>
+                    )}
+                    {headers && Object.keys(headers).length > 0 && (
+                      <Box mb={2}>
+                        <Text fontSize="xs" fontWeight="bold" color={darkMode ? 'teal.300' : 'teal.600'}>Response Headers:</Text>
+                        <Box pl={2}>
+                          {Object.entries(headers).map(([headerName, headerObj]) => (
+                            <Box key={headerName} display="flex" alignItems="center" fontSize="xs" mb={1}>
+                              <Text as="span" fontWeight="bold" color={darkMode ? 'teal.200' : 'teal.700'} minW="80px">{headerName}</Text>
+                              <Text as="span" color={darkMode ? 'gray.400' : 'gray.600'} ml={2}>{headerObj.description || ''}</Text>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
                     <SelectAllButton
                       typeName={typeName}
                       sample={sample}

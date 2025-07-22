@@ -65,6 +65,8 @@ export function generateGraphQLSchemaFromSelections(
     query: QueryType
   });
 
+  console.log('Generated GraphQL schema:', schema)
+
   return generateSchemaWithDirectives(schema, [], queryDirectives, requiredScopes);
 }
 

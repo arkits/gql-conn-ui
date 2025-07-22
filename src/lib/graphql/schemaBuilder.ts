@@ -8,11 +8,21 @@ import {
   GraphQLBoolean,
   type GraphQLFieldConfigMap,
   type GraphQLOutputType,
-  type GraphQLInputType
-} from 'graphql';
-import type { OpenAPISchema, OpenAPISpec, SelectedAttributes } from '../../types/openapi';
-import type { TypeMaps } from './types';
-import { hasRef, resolveRef, getRefName } from './utils';
+  type GraphQLInputType,
+} from "graphql";
+import type {
+  OpenAPISchema,
+  OpenAPISpec,
+  SelectedAttributes,
+} from "../../types/openapi";
+import type { TypeMaps } from "./types";
+import {
+  hasRef,
+  resolveRef,
+  getRefName,
+  getPreferredName,
+  singularizeAndCapitalize,
+} from "./utils";
 
 export function buildObjectType(
   name: string,
@@ -24,64 +34,104 @@ export function buildObjectType(
   typeMaps: TypeMaps
 ): GraphQLObjectType | GraphQLList<GraphQLObjectType> {
   if (!schema) {
-    const typeName = name.endsWith('_Empty') ? name : name + '_Empty';
+    const typeName = name.endsWith("_Empty") ? name : name + "_Empty";
     return new GraphQLObjectType({ name: typeName, fields: {} });
   }
+
+  console.log(`Building GraphQL type for: ${name}`, schema);
 
   if (schema.$ref) {
     const refName = getRefName(schema.$ref);
     if (typeMaps.output[refName]) return typeMaps.output[refName];
-    
     const resolved = resolveRef(schema.$ref, openApi);
     if (!resolved) {
-      return new GraphQLObjectType({ name: refName + '_Unresolved', fields: {} });
+      return new GraphQLObjectType({
+        name: refName + "_Unresolved",
+        fields: {},
+      });
     }
 
-    const nestedSelectedAttrs = enrichSelectedAttrsForRef(selectedAttrs, typeName, path, refName);
-    const gqlType = buildObjectType(refName, resolved, openApi, nestedSelectedAttrs, refName, [], typeMaps);
+    const nestedSelectedAttrs = enrichSelectedAttrsForRef(
+      selectedAttrs,
+      typeName,
+      path,
+      refName
+    );
+    const gqlType = buildObjectType(
+      refName,
+      resolved,
+      openApi,
+      nestedSelectedAttrs,
+      refName,
+      [],
+      typeMaps
+    );
     typeMaps.output[refName] = gqlType as GraphQLObjectType;
     return gqlType;
   }
 
-  if (schema.type === 'object') {
+  if (schema.type === "object") {
     const selected = selectedAttrs[typeName] || {};
     const fields: GraphQLFieldConfigMap<unknown, unknown> = {};
 
     if (schema.properties) {
       for (const [key, propSchema] of Object.entries(schema.properties)) {
-        const attrPath = [...path, key].join('.');
+        const attrPath = [...path, key].join(".");
         if (selected[attrPath]) {
           let nestedTypeName = key;
-          if (propSchema && hasRef(propSchema)) {
-            nestedTypeName = getRefName(propSchema.$ref);
+          if (propSchema) {
+            const preferredName = getPreferredName(propSchema);
+            if (preferredName) {
+              nestedTypeName = preferredName;
+            }
           }
 
+          console.log(`Processing property: ${key} with type: ${nestedTypeName}`, propSchema);
+
           fields[key] = {
-            type: mapToGraphQLOutputTypeInternal(propSchema, openApi, selectedAttrs, nestedTypeName, [...path, key], typeMaps)
+            type: mapToGraphQLOutputTypeInternal(
+              propSchema,
+              openApi,
+              selectedAttrs,
+              nestedTypeName,
+              [...path, key],
+              typeMaps
+            ),
           };
         }
       }
     }
 
-    const gqlType = new GraphQLObjectType({ name, fields, description: schema.description });
+    const gqlType = new GraphQLObjectType({
+      name,
+      fields,
+      description: schema.description,
+    });
     typeMaps.output[name] = gqlType;
     return gqlType;
   }
 
-  if (schema.type === 'array') {
-    let itemTypeName = typeName.replace(/s$/, '');
-    if (hasRef(schema.items) && schema.items) {
-      itemTypeName = getRefName(schema.items.$ref);
+  if (schema.type === "array") {
+    let itemTypeName = singularizeAndCapitalize(typeName);
+    if (schema.items) {
+      const preferredName = getPreferredName(schema.items);
+      if (preferredName) {
+        itemTypeName = preferredName;
+      }
     }
+    
     // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
     const parentSelected = selectedAttrs[typeName] || {};
     const itemSelectedAttrs: Record<string, boolean> = {};
     for (const key in parentSelected) {
-      if (key.startsWith('0.')) {
+      if (key.startsWith("0.")) {
         itemSelectedAttrs[key.slice(2)] = parentSelected[key];
       }
     }
-    const normalizedSelectedAttrs = { ...selectedAttrs, [itemTypeName]: itemSelectedAttrs };
+    const normalizedSelectedAttrs = {
+      ...selectedAttrs,
+      [itemTypeName]: itemSelectedAttrs,
+    };
     return new GraphQLList(
       buildObjectType(
         itemTypeName,
@@ -89,13 +139,13 @@ export function buildObjectType(
         openApi,
         normalizedSelectedAttrs,
         itemTypeName,
-        [...path, '0'],
+        [...path, "0"],
         typeMaps
       ) as GraphQLObjectType
     );
   }
 
-  return new GraphQLObjectType({ name: name + '_Scalar', fields: {} });
+  return new GraphQLObjectType({ name: name + "_Scalar", fields: {} });
 }
 
 export function buildInputType(
@@ -105,17 +155,20 @@ export function buildInputType(
   typeMaps: TypeMaps
 ): GraphQLInputObjectType {
   if (!schema) {
-    const typeName = name.endsWith('_Empty') ? name : name + '_Empty';
+    const typeName = name.endsWith("_Empty") ? name : name + "_Empty";
     return new GraphQLInputObjectType({ name: typeName, fields: {} });
   }
 
   if (schema.$ref) {
-    const refName = getRefName(schema.$ref) + 'Input';
+    const refName = getRefName(schema.$ref) + "Input";
     if (typeMaps.input[refName]) return typeMaps.input[refName];
-    
+
     const resolved = resolveRef(schema.$ref, openApi);
     if (!resolved) {
-      return new GraphQLInputObjectType({ name: refName + '_Unresolved', fields: {} });
+      return new GraphQLInputObjectType({
+        name: refName + "_Unresolved",
+        fields: {},
+      });
     }
 
     const gqlType = buildInputType(refName, resolved, openApi, typeMaps);
@@ -123,12 +176,17 @@ export function buildInputType(
     return gqlType;
   }
 
-  if (schema.type === 'object') {
+  if (schema.type === "object") {
     const fields: Record<string, { type: GraphQLInputType }> = {};
     if (schema.properties) {
       for (const [key, propSchema] of Object.entries(schema.properties)) {
-        fields[key] = { 
-          type: mapToGraphQLInputTypeInternal(propSchema, openApi, typeMaps, name + '_' + key) 
+        fields[key] = {
+          type: mapToGraphQLInputTypeInternal(
+            propSchema,
+            openApi,
+            typeMaps,
+            name + "_" + key
+          ),
         };
       }
     }
@@ -138,7 +196,10 @@ export function buildInputType(
     return gqlType;
   }
 
-  return new GraphQLInputObjectType({ name: name + '_ScalarInput', fields: {} });
+  return new GraphQLInputObjectType({
+    name: name + "_ScalarInput",
+    fields: {},
+  });
 }
 
 function enrichSelectedAttrsForRef(
@@ -148,19 +209,19 @@ function enrichSelectedAttrsForRef(
   refName: string
 ): SelectedAttributes {
   let nestedSelectedAttrs = selectedAttrs[refName];
-  
+
   if (!nestedSelectedAttrs || Object.keys(nestedSelectedAttrs).length === 0) {
     const parentSelected = selectedAttrs[typeName] || {};
-    const prefix = path.length > 0 ? path.join('.') + '.' : '';
+    const prefix = path.length > 0 ? path.join(".") + "." : "";
     nestedSelectedAttrs = {};
-    
+
     for (const attrPath in parentSelected) {
       if (attrPath.startsWith(prefix)) {
         const rest = attrPath.slice(prefix.length);
-        if (rest && !rest.includes('.')) {
+        if (rest && !rest.includes(".")) {
           nestedSelectedAttrs[rest] = true;
         } else if (rest) {
-          const first = rest.split('.')[0];
+          const first = rest.split(".")[0];
           nestedSelectedAttrs[first] = true;
         }
       }
@@ -183,46 +244,75 @@ function mapToGraphQLOutputTypeInternal(
   if (schema.$ref) {
     const refName = getRefName(schema.$ref);
     if (typeMaps.output[refName]) return typeMaps.output[refName];
-    
+
     const resolved = resolveRef(schema.$ref, openApi);
     if (!resolved) return GraphQLString;
-    
-    const gqlType = buildObjectType(refName, resolved, openApi, selectedAttrs, refName, [], typeMaps);
+
+    const gqlType = buildObjectType(
+      refName,
+      resolved,
+      openApi,
+      selectedAttrs,
+      refName,
+      [],
+      typeMaps
+    );
     typeMaps.output[refName] = gqlType as GraphQLObjectType;
     return gqlType;
   }
 
   switch (schema.type) {
-    case 'object': {
-      return buildObjectType(typeName, schema, openApi, selectedAttrs, typeName, path, typeMaps);
+    case "object": {
+      return buildObjectType(
+        typeName,
+        schema,
+        openApi,
+        selectedAttrs,
+        typeName,
+        path,
+        typeMaps
+      );
     }
-    
-    case 'array': {
-      let itemTypeName = typeName.replace(/s$/, '');
-      if (hasRef(schema.items) && schema.items) {
-        itemTypeName = getRefName(schema.items.$ref);
+
+    case "array": {
+      let itemTypeName = singularizeAndCapitalize(typeName);
+      if (schema.items) {
+        const preferredName = getPreferredName(schema.items);
+        if (preferredName) {
+          itemTypeName = preferredName;
+        }
       }
       // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
       const parentSelected = selectedAttrs[typeName] || {};
       const itemSelectedAttrs: Record<string, boolean> = {};
       for (const key in parentSelected) {
-        if (key.startsWith('0.')) {
+        if (key.startsWith("0.")) {
           itemSelectedAttrs[key.slice(2)] = parentSelected[key];
         }
       }
-      const normalizedSelectedAttrs = { ...selectedAttrs, [itemTypeName]: itemSelectedAttrs };
+      const normalizedSelectedAttrs = {
+        ...selectedAttrs,
+        [itemTypeName]: itemSelectedAttrs,
+      };
       return new GraphQLList(
-        mapToGraphQLOutputTypeInternal(schema.items, openApi, normalizedSelectedAttrs, itemTypeName, [...path, '0'], typeMaps)
+        mapToGraphQLOutputTypeInternal(
+          schema.items,
+          openApi,
+          normalizedSelectedAttrs,
+          itemTypeName,
+          [...path, "0"],
+          typeMaps
+        )
       );
     }
-    
-    case 'string':
+
+    case "string":
       return GraphQLString;
-    case 'integer':
+    case "integer":
       return GraphQLInt;
-    case 'number':
+    case "number":
       return GraphQLFloat;
-    case 'boolean':
+    case "boolean":
       return GraphQLBoolean;
     default:
       return GraphQLString;
@@ -233,40 +323,45 @@ function mapToGraphQLInputTypeInternal(
   schema: OpenAPISchema | undefined,
   openApi: OpenAPISpec,
   typeMaps: TypeMaps,
-  nameHint = 'Input'
+  nameHint = "Input"
 ): GraphQLInputType {
   if (!schema) return GraphQLString;
 
   if (schema.$ref) {
     const refName = getRefName(schema.$ref) + nameHint;
     if (typeMaps.input[refName]) return typeMaps.input[refName];
-    
+
     const resolved = resolveRef(schema.$ref, openApi);
     if (!resolved) return GraphQLString;
-    
+
     const gqlType = buildInputType(refName, resolved, openApi, typeMaps);
     typeMaps.input[refName] = gqlType;
     return gqlType;
   }
 
   switch (schema.type) {
-    case 'object': {
+    case "object": {
       return buildInputType(nameHint, schema, openApi, typeMaps);
     }
-    
-    case 'array': {
+
+    case "array": {
       return new GraphQLList(
-        mapToGraphQLInputTypeInternal(schema.items, openApi, typeMaps, nameHint + 'Item')
+        mapToGraphQLInputTypeInternal(
+          schema.items,
+          openApi,
+          typeMaps,
+          nameHint + "Item"
+        )
       );
     }
-    
-    case 'string':
+
+    case "string":
       return GraphQLString;
-    case 'integer':
+    case "integer":
       return GraphQLInt;
-    case 'number':
+    case "number":
       return GraphQLFloat;
-    case 'boolean':
+    case "boolean":
       return GraphQLBoolean;
     default:
       return GraphQLString;

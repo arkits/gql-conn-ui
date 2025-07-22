@@ -42,8 +42,13 @@ export interface OpenAPISchema {
   properties?: Record<string, OpenAPISchema>;
   items?: OpenAPISchema;
   $ref?: string;
+  $$ref?: string;
   required?: string[];
   description?: string;
+  xml?: {
+    name?: string;
+    wrapped?: boolean;
+  };
 }
 
 export interface TreeNode {

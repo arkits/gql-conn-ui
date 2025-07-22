@@ -1,5 +1,5 @@
 import type { OpenAPISpec, OpenAPISchema, SelectedAttributes } from '../../types/openapi';
-import { hasRef, getRefName } from './utils';
+import { hasRef, getPreferredName } from './utils';
 
 export function enrichSelectedAttributes(
   selectedAttrs: SelectedAttributes,
@@ -46,27 +46,31 @@ function addSelectedAttrForReference(
     addLeafProperty(field, currentTypeName, enrichedSelectedAttrs);
     // If the property is a $ref or array of $ref, select all children
     const propSchema = schema.properties[field];
-    if (propSchema?.$ref) {
-      const refType = getRefName(propSchema.$ref);
-      const refSchema = openApi.components?.schemas?.[refType];
-      if (refSchema && refSchema.properties) {
-        ensureTypeExists(refType, enrichedSelectedAttrs);
-        for (const childKey of Object.keys(refSchema.properties)) {
-          enrichedSelectedAttrs[refType][childKey] = true;
+    if (hasRef(propSchema)) {
+      const refType = getPreferredName(propSchema);
+      if (refType) {
+        const refSchema = openApi.components?.schemas?.[refType];
+        if (refSchema && refSchema.properties) {
+          ensureTypeExists(refType, enrichedSelectedAttrs);
+          for (const childKey of Object.keys(refSchema.properties)) {
+            enrichedSelectedAttrs[refType][childKey] = true;
+          }
         }
       }
     } else if (propSchema?.type === 'array' && propSchema.items && hasRef(propSchema.items)) {
-      const refType = getRefName(propSchema.items.$ref);
-      const refSchema = openApi.components?.schemas?.[refType];
-      if (refSchema && refSchema.properties) {
-        ensureTypeExists(refType, enrichedSelectedAttrs);
-        for (const childKey of Object.keys(refSchema.properties)) {
-          enrichedSelectedAttrs[refType][childKey] = true;
+      const refType = getPreferredName(propSchema.items);
+      if (refType) {
+        const refSchema = openApi.components?.schemas?.[refType];
+        if (refSchema && refSchema.properties) {
+          ensureTypeExists(refType, enrichedSelectedAttrs);
+          for (const childKey of Object.keys(refSchema.properties)) {
+            enrichedSelectedAttrs[refType][childKey] = true;
+          }
         }
       }
     }
     // NEW: If the property itself is selected (e.g. 'category'), select all children
-    if (propSchema?.$ref || (propSchema?.type === 'array' && propSchema.items && hasRef(propSchema.items))) {
+    if (hasRef(propSchema) || (propSchema?.type === 'array' && propSchema.items && hasRef(propSchema.items))) {
       // Already handled above
     } else if (rest.length === 0 && (propSchema?.type === 'object' && propSchema.properties)) {
       for (const childKey of Object.keys(propSchema.properties)) {
@@ -97,7 +101,7 @@ function handleArrayIndexZero(
   currentTypeName?: string
 ): void {
   if (schema.items && hasRef(schema.items)) {
-    const refType = getRefName(schema.items.$ref);
+    const refType = getPreferredName(schema.items);
     if (rest.length > 0) {
       const [nextField, ...nextRest] = rest;
       if (!refType || !nextField) return;
@@ -128,7 +132,10 @@ function handleArrayIndexZero(
   // Recurse into items with the item type name
   let itemTypeName = currentTypeName;
   if (schema.items && hasRef(schema.items)) {
-    itemTypeName = getRefName(schema.items.$ref);
+    const preferredName = getPreferredName(schema.items);
+    if (preferredName) {
+      itemTypeName = preferredName;
+    }
   }
   if (schema.items) {
     addSelectedAttrForReference(schema.items, rest, enrichedSelectedAttrs, openApi, itemTypeName);
@@ -152,13 +159,19 @@ function handleNestedProperty(
   openApi: OpenAPISpec,
   currentTypeName?: string
 ): void {
-  if (nextSchema.$ref) {
-    handleRefProperty(nextSchema.$ref, rest, enrichedSelectedAttrs, openApi);
+  if (hasRef(nextSchema)) {
+    const preferredName = getPreferredName(nextSchema);
+    if (preferredName) {
+      handleRefProperty(preferredName, rest, enrichedSelectedAttrs, openApi);
+    }
     return;
   }
 
   if (nextSchema.type === 'array' && nextSchema.items && hasRef(nextSchema.items)) {
-    handleArrayRefProperty(nextSchema.items.$ref, rest, enrichedSelectedAttrs, openApi);
+    const preferredName = getPreferredName(nextSchema.items);
+    if (preferredName) {
+      handleArrayRefProperty(preferredName, rest, enrichedSelectedAttrs, openApi);
+    }
     return;
   }
 
@@ -168,51 +181,49 @@ function handleNestedProperty(
 }
 
 function handleRefProperty(
-  ref: string,
+  typeName: string,
   rest: string[],
   enrichedSelectedAttrs: SelectedAttributes,
   openApi: OpenAPISpec
 ): void {
-  const nextTypeName = getRefName(ref);
   if (rest.length === 0) return;
 
-  ensureTypeExists(nextTypeName, enrichedSelectedAttrs);
+  ensureTypeExists(typeName, enrichedSelectedAttrs);
 
   if (rest.length === 1) {
-    enrichedSelectedAttrs[nextTypeName][rest[0]] = true;
+    enrichedSelectedAttrs[typeName][rest[0]] = true;
   } else {
-    const refSchema = openApi.components?.schemas?.[nextTypeName];
+    const refSchema = openApi.components?.schemas?.[typeName];
     if (refSchema) {
-      addSelectedAttrForReference(refSchema, rest, enrichedSelectedAttrs, openApi, nextTypeName);
+      addSelectedAttrForReference(refSchema, rest, enrichedSelectedAttrs, openApi, typeName);
     }
   }
 }
 
 function handleArrayRefProperty(
-  itemRef: string,
+  typeName: string,
   rest: string[],
   enrichedSelectedAttrs: SelectedAttributes,
   openApi: OpenAPISpec
 ): void {
-  const nextTypeName = getRefName(itemRef);
   if (rest.length === 0) return;
 
   const [arrayField, ...arrayRest] = rest;
   if (!arrayField) return;
 
-  ensureTypeExists(nextTypeName, enrichedSelectedAttrs);
+  ensureTypeExists(typeName, enrichedSelectedAttrs);
 
   if (arrayField === '0') {
-    const refSchema = openApi.components?.schemas?.[nextTypeName];
+    const refSchema = openApi.components?.schemas?.[typeName];
     if (refSchema && arrayRest.length > 0) {
-      addSelectedAttrForReference(refSchema, arrayRest, enrichedSelectedAttrs, openApi, nextTypeName);
+      addSelectedAttrForReference(refSchema, arrayRest, enrichedSelectedAttrs, openApi, typeName);
     }
   } else if (arrayRest.length === 0) {
-    enrichedSelectedAttrs[nextTypeName][arrayField] = true;
+    enrichedSelectedAttrs[typeName][arrayField] = true;
   } else {
-    const refSchema = openApi.components?.schemas?.[nextTypeName];
+    const refSchema = openApi.components?.schemas?.[typeName];
     if (refSchema) {
-      addSelectedAttrForReference(refSchema, [arrayField, ...arrayRest], enrichedSelectedAttrs, openApi, nextTypeName);
+      addSelectedAttrForReference(refSchema, [arrayField, ...arrayRest], enrichedSelectedAttrs, openApi, typeName);
     }
   }
 }
@@ -225,27 +236,29 @@ function handleRootArray(
   currentTypeName?: string
 ): void {
   if (hasRef(items)) {
-    const nextTypeName = getRefName(items.$ref);
+    const preferredName = getPreferredName(items);
+    if (!preferredName) return;
+    const typeName = preferredName;
     const [arrayField, ...arrayRest] = pathSegments;
     
     if (!arrayField) return;
     
-    ensureTypeExists(nextTypeName, enrichedSelectedAttrs);
+    ensureTypeExists(typeName, enrichedSelectedAttrs);
 
     if (arrayRest.length === 0) {
       // Path ends at array item: select all children of the referenced type
-      const refSchema = openApi.components?.schemas?.[nextTypeName];
+      const refSchema = openApi.components?.schemas?.[typeName];
       if (refSchema && refSchema.properties) {
         for (const childKey of Object.keys(refSchema.properties)) {
-          enrichedSelectedAttrs[nextTypeName][childKey] = true;
+          enrichedSelectedAttrs[typeName][childKey] = true;
         }
       }
     } else if (arrayField === '0') {
-      addSelectedAttrForReference(items, arrayRest, enrichedSelectedAttrs, openApi, nextTypeName);
+      addSelectedAttrForReference(items, arrayRest, enrichedSelectedAttrs, openApi, typeName);
     } else {
-      const refSchema = openApi.components?.schemas?.[nextTypeName];
+      const refSchema = openApi.components?.schemas?.[typeName];
       if (refSchema) {
-        addSelectedAttrForReference(refSchema, [arrayField, ...arrayRest], enrichedSelectedAttrs, openApi, nextTypeName);
+        addSelectedAttrForReference(refSchema, [arrayField, ...arrayRest], enrichedSelectedAttrs, openApi, typeName);
       }
     }
   } else if (pathSegments.length > 0 && currentTypeName) {

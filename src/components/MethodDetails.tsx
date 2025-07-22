@@ -191,12 +191,24 @@ export const MethodDetails: React.FC<MethodDetailsProps> = memo(({
                 const sample = generateSampleFromSchema(contentObj.schema, openApi);
                 if (!sample) return null;
                 
-                let typeName: string;
-                if (typeof contentObj.schema === 'object' && contentObj.schema && '$ref' in contentObj.schema) {
-                  typeName = (contentObj.schema.$ref as string).replace('#/components/schemas/', '');
-                } else if (details.operationId) {
+                let typeName: string | undefined;
+                const schemaObj = contentObj.schema as any;
+                // Prefer $ref, then $$ref, then xml.name, then fallback
+                if (schemaObj && typeof schemaObj === 'object') {
+                  if ('$ref' in schemaObj && typeof schemaObj.$ref === 'string') {
+                    typeName = schemaObj.$ref.replace('#/components/schemas/', '');
+                  } else if ('$$ref' in schemaObj && typeof schemaObj['$$ref'] === 'string') {
+                    // Try to extract the last part after /components/schemas/
+                    const match = schemaObj['$$ref'].match(/\/components\/schemas\/([^/]+)/);
+                    typeName = match ? match[1] : undefined;
+                  } else if (schemaObj.xml && typeof schemaObj.xml.name === 'string') {
+                    typeName = schemaObj.xml.name;
+                  }
+                }
+                if (!typeName && details.operationId) {
                   typeName = details.operationId + '_' + code;
-                } else {
+                }
+                if (!typeName) {
                   typeName = 'Type_' + code;
                 }
                 

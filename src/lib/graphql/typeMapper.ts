@@ -11,7 +11,7 @@ import {
 } from 'graphql';
 import type { OpenAPISchema, OpenAPISpec, SelectedAttributes } from '../../types/openapi';
 import type { TypeMaps } from './types';
-import { hasRef, resolveRef, getRefName } from './utils';
+import { hasRef, resolveRef, getRefName, capitalizeTypeName, singularizeAndCapitalize } from './utils';
 import { buildObjectType, buildInputType } from './schemaBuilder';
 
 export function mapToGraphQLOutputType(
@@ -42,13 +42,32 @@ export function mapToGraphQLOutputType(
     }
     
     case 'array': {
-      let itemTypeName = typeName.replace(/s$/, '');
-      if (hasRef(schema.items) && schema.items) {
-        itemTypeName = getRefName(schema.items.$ref);
+      let itemTypeName = singularizeAndCapitalize(typeName);
+      const items = schema.items || {};
+      const itemsWithMeta = items as { $ref?: string; $$ref?: string; xml?: { name?: string } };
+      // If $$ref, resolve the referenced schema and use its xml.name if present
+      if (itemsWithMeta.$$ref && typeof itemsWithMeta.$$ref === 'string') {
+        const match = itemsWithMeta.$$ref.match(/\/components\/schemas\/([^/]+)/);
+        if (match) {
+          const refName = match[1];
+          const refSchema = openApi.components?.schemas?.[refName] as OpenAPISchema & { xml?: { name?: string } };
+          if (refSchema && refSchema.xml && typeof refSchema.xml.name === 'string') {
+            itemTypeName = capitalizeTypeName(refSchema.xml.name);
+          } else {
+            itemTypeName = refName;
+          }
+        }
+      } else if (itemsWithMeta.xml && typeof itemsWithMeta.xml.name === 'string') {
+        itemTypeName = capitalizeTypeName(itemsWithMeta.xml.name);
+      } else if (hasRef(items)) {
+        itemTypeName = getRefName(itemsWithMeta.$ref!);
       }
-      return new GraphQLList(
-        mapToGraphQLOutputType(schema.items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps)
-      );
+      // Ensure the type is registered in typeMaps/output with the correct name
+      const gqlType = mapToGraphQLOutputType(items, openApi, selectedAttrs, itemTypeName, [...path, '0'], typeMaps);
+      if (gqlType instanceof GraphQLObjectType && !typeMaps.output[itemTypeName]) {
+        typeMaps.output[itemTypeName] = gqlType;
+      }
+      return new GraphQLList(gqlType);
     }
     
     case 'string':

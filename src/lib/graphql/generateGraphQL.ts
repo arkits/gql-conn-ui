@@ -6,7 +6,6 @@ import {
 } from 'graphql';
 import type { OpenAPISpec, SelectedAttributes, SelectedEndpoints } from '../../types/openapi';
 import type { TypeMaps } from './types';
-import { enrichSelectedAttributes } from './selectionEnricher';
 import { processOperation } from './operationProcessor';
 
 export function generateGraphQLSchemaFromSelections(
@@ -16,8 +15,6 @@ export function generateGraphQLSchemaFromSelections(
   requiredScopes: string[][] = [["test"]]
 ): string {
   if (!openApi) return '';
-
-  const enrichedAttrs = enrichSelectedAttributes(selectedAttrs, openApi);
   
   const typeMaps: TypeMaps = {
     output: {},
@@ -38,7 +35,7 @@ export function generateGraphQLSchemaFromSelections(
     const details = methods[method.toLowerCase()];
     if (!details) continue;
 
-    const result = processOperation(path, method.toLowerCase(), details, openApi, enrichedAttrs, typeMaps);
+    const result = processOperation(path, method.toLowerCase(), details, openApi, selectedAttrs, typeMaps);
     
     if (result) {
       queryFields[result.operationId] = {
@@ -65,16 +62,31 @@ export function generateGraphQLSchemaFromSelections(
     query: QueryType
   });
 
-  return generateSchemaWithDirectives(schema, [], queryDirectives, requiredScopes);
+  return generateSchemaWithDirectives(schema, [], queryDirectives, requiredScopes, openApi);
 }
 
 function generateSchemaWithDirectives(
   schema: GraphQLSchema,
   _comments: string[], // unused now
   queryDirectives: Record<string, { path: string; method: string; selection: string[] }>,
-  requiredScopes: string[][]
+  requiredScopes: string[][],
+  openApi: OpenAPISpec
 ): string {
   let sdl = printSchema(schema);
+
+  // Add type comments with OpenAPI type names and descriptions
+  sdl = sdl.replace(/(type\s+(\w+)\s*(?:@\w+[^{]*)?\{)/g, (match, typeDef, typeName) => {
+    if (typeName === 'Query') return match;
+    
+    // Look up the type in the OpenAPI schema
+    const schema = openApi?.components?.schemas?.[typeName];
+    if (schema && schema.description) {
+      const comment = `# ${typeName}: ${schema.description}\n`;
+      return comment + match;
+    }
+    
+    return match;
+  });
 
   // Inject directives into query fields (only @dataSource)
   sdl = sdl.replace(/(type Query \{[\s\S]*?\n\})/, (match) => {

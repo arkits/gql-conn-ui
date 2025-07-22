@@ -10,7 +10,7 @@ import type {
   OpenAPISchema
 } from '../../types/openapi';
 import type { TypeMaps, GraphQLOperationResult } from './types';
-import { hasRef, getRefName, isSuccessResponse, generateOperationId } from './utils';
+import { hasRef, getRefName, isSuccessResponse, generateOperationId, capitalizeTypeName, singularizeAndCapitalize } from './utils';
 import { mapToGraphQLInputType, mapParameterToGraphQLInput } from './typeMapper';
 import { buildObjectType } from './schemaBuilder';
 
@@ -40,7 +40,11 @@ export function processOperation(
     if (!mediaType.includes('json') || !contentObj.schema) continue;
 
     const typeName = determineTypeName(contentObj.schema, operationId, code);
+    console.log(`Processing type: ${typeName} for operation: ${operationId} at path: ${path} with method: ${method}`);
+
+
     const selected = selectedAttrs[typeName];
+    console.log(`Selected attributes for ${typeName}:`, selected);
     
     if (!selected || Object.keys(selected).length === 0) continue;
 
@@ -70,6 +74,13 @@ function determineTypeName(schema: OpenAPISchema, operationId: string, code: str
   if (schema.$ref) {
     return getRefName(schema.$ref);
   }
+  // Support for $$ref (swagger-client) and xml.name
+  // Handle $$ref (swagger-client) as a non-standard property
+  const schemaWithRef = schema as { $$ref?: string; xml?: { name?: string } };
+  if (schemaWithRef.$$ref && typeof schemaWithRef.$$ref === 'string') {
+    const match = schemaWithRef.$$ref.match(/\/components\/schemas\/([^/]+)/);
+    if (match) return match[1];
+  }
   if (operationId) {
     return operationId + '_' + code;
   }
@@ -84,7 +95,7 @@ function buildResponseType(
   typeMaps: TypeMaps
 ): GraphQLOutputType {
   if (schema.type === 'array') {
-    let itemTypeName = typeName.replace(/s$/, '');
+    let itemTypeName = singularizeAndCapitalize(typeName);
     if (hasRef(schema.items) && schema.items) {
       itemTypeName = getRefName(schema.items.$ref);
     }

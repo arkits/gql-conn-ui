@@ -151,6 +151,11 @@ export function buildObjectType(
       $ref: undefined
     };
     
+    // Special handling for arrays that have been merged
+    if (schema.type === "array") {
+      return buildObjectType(preferredName, mergedSchema, openApi, selectedAttrs, preferredName, path, typeMaps);
+    }
+    
     return buildObjectType(preferredName, mergedSchema, openApi, selectedAttrs, typeName, path, typeMaps);
   }
 
@@ -214,6 +219,10 @@ export function buildObjectType(
       if (preferredName) {
         itemTypeName = preferredName;
       }
+      // If items has a direct $ref, use that as the type name
+      else if (schema.items.$ref) {
+        itemTypeName = getRefName(schema.items.$ref);
+      }
     }
     
     // Handle both direct selection and nested selection for array items
@@ -228,6 +237,24 @@ export function buildObjectType(
         // Only copy if it's true, or if it's explicitly false
         if (value === true || value === false) {
           itemSelectedAttrs[normalizedKey] = value;
+        }
+      }
+    }
+    
+    // IMPORTANT: Also check for selections that match the typeName pattern
+    // For arrays like DepositHistory, we need to look for patterns like "depositHistory.0.fieldName"
+    const typeNameLower = typeName.toLowerCase();
+    for (const [fullPath, value] of Object.entries(selectedAttrs)) {
+      if (fullPath !== typeName && fullPath !== itemTypeName) {
+        const attrs = selectedAttrs[fullPath] || {};
+        for (const [attrPath, attrValue] of Object.entries(attrs)) {
+          // Look for patterns like "depositHistory.0.fieldName"
+          if (attrPath.toLowerCase().startsWith(`${typeNameLower}.0.`)) {
+            const fieldName = attrPath.substring(`${typeNameLower}.0.`.length);
+            if (!(fieldName in itemSelectedAttrs)) {
+              itemSelectedAttrs[fieldName] = attrValue;
+            }
+          }
         }
       }
     }
@@ -426,12 +453,38 @@ function mapToGraphQLOutputTypeInternal(
       $ref: undefined
     };
     
+    // For arrays with merged schemas, use the ref name as the type name
+    if (schema.type === "array") {
+      return buildObjectType(
+        preferredName,
+        mergedSchema,
+        openApi,
+        selectedAttrs,
+        preferredName,
+        path,
+        typeMaps
+      );
+    }
+    
     return buildObjectType(
       preferredName,
       mergedSchema,
       openApi,
       selectedAttrs,
       preferredName,
+      path,
+      typeMaps
+    );
+  }
+
+  // Handle objects without explicit type but with properties (before the switch statement)
+  if (!schema.type && schema.properties) {
+    return buildObjectType(
+      typeName,
+      schema,
+      openApi,
+      selectedAttrs,
+      typeName,
       path,
       typeMaps
     );
@@ -457,19 +510,69 @@ function mapToGraphQLOutputTypeInternal(
         if (preferredName) {
           itemTypeName = preferredName;
         }
-      }
-      // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
-      const parentSelected = selectedAttrs[typeName] || {};
-      const itemSelectedAttrs: Record<string, boolean> = {};
-      for (const key in parentSelected) {
-        if (key.startsWith("0.")) {
-          itemSelectedAttrs[key.slice(2)] = parentSelected[key];
+        // If items has a direct $ref, use that as the type name
+        else if (schema.items.$ref) {
+          itemTypeName = getRefName(schema.items.$ref);
         }
       }
+      
+      // Handle both direct selection and nested selection for array items
+      const parentSelected = selectedAttrs[typeName] || {};
+      const existingItemAttrs = selectedAttrs[itemTypeName] || {};
+      const itemSelectedAttrs: Record<string, boolean> = {};
+
+      // Process array item selections (with '0.' prefix)
+      for (const [key, value] of Object.entries(parentSelected)) {
+        if (key.startsWith("0.")) {
+          const normalizedKey = key.slice(2);
+          // Only copy if it's true, or if it's explicitly false
+          if (value === true || value === false) {
+            itemSelectedAttrs[normalizedKey] = value;
+          }
+        }
+      }
+      
+      // IMPORTANT: Also check for selections that match the typeName pattern
+      // For arrays like DepositHistory, we need to look for patterns like "depositHistory.0.fieldName"
+      const typeNameLower = typeName.toLowerCase();
+      for (const [fullPath, value] of Object.entries(selectedAttrs)) {
+        if (fullPath !== typeName && fullPath !== itemTypeName) {
+          const attrs = selectedAttrs[fullPath] || {};
+          for (const [attrPath, attrValue] of Object.entries(attrs)) {
+            // Look for patterns like "depositHistory.0.fieldName"
+            if (attrPath.toLowerCase().startsWith(`${typeNameLower}.0.`)) {
+              const fieldName = attrPath.substring(`${typeNameLower}.0.`.length);
+              if (!(fieldName in itemSelectedAttrs)) {
+                itemSelectedAttrs[fieldName] = attrValue;
+              }
+            }
+          }
+        }
+      }
+
+      // Process direct selections on the referenced type, but don't override explicit array selections
+      if (hasRef(schema.items)) {
+        const refName = getRefName((schema.items as { $ref: string }).$ref);
+        const refSelectedAttrs = selectedAttrs[refName] || {};
+        for (const [key, value] of Object.entries(refSelectedAttrs)) {
+          if (!(key in itemSelectedAttrs)) {
+            itemSelectedAttrs[key] = value;
+          }
+        }
+      }
+
+      // Process direct selections on the item type, but don't override array selections
+      for (const [key, value] of Object.entries(existingItemAttrs)) {
+        if (!(key in itemSelectedAttrs)) {
+          itemSelectedAttrs[key] = value;
+        }
+      }
+
       const normalizedSelectedAttrs = {
         ...selectedAttrs,
         [itemTypeName]: itemSelectedAttrs,
       };
+      
       return new GraphQLList(
         mapToGraphQLOutputTypeInternal(
           schema.items,
@@ -535,12 +638,24 @@ function mapToGraphQLInputTypeInternal(
     }
 
     case "array": {
+      let itemTypeName = nameHint + "Item";
+      if (schema.items) {
+        const preferredName = getPreferredName(schema.items);
+        if (preferredName) {
+          itemTypeName = preferredName + "Input";
+        }
+        // If items has a direct $ref, use that as the type name
+        else if (schema.items.$ref) {
+          itemTypeName = getRefName(schema.items.$ref) + "Input";
+        }
+      }
+      
       return new GraphQLList(
         mapToGraphQLInputTypeInternal(
           schema.items,
           openApi,
           typeMaps,
-          nameHint + "Item"
+          itemTypeName
         )
       );
     }

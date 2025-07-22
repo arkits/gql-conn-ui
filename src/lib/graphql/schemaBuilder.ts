@@ -71,13 +71,29 @@ export function buildObjectType(
   }
 
   if (schema.type === "object") {
+    console.log(`Processing object type: ${name} ${typeName}`, schema);
+    
+    // Get direct selections for this type
     const selected = selectedAttrs[typeName] || {};
+    
+    console.log(`Selected attributes for ${name}:`, selectedAttrs, selected);
     const fields: GraphQLFieldConfigMap<unknown, unknown> = {};
 
     if (schema.properties) {
+      console.log(`Processing object type properties for: ${name}`, schema.properties);
       for (const [key, propSchema] of Object.entries(schema.properties)) {
-        const attrPath = [...path, key].join(".");
-        if (selected[attrPath]) {
+        // Check both direct field selection and nested paths
+        const isSelected = selected[key] || Object.keys(selectedAttrs).some(parentType => {
+          const parentAttrs = selectedAttrs[parentType];
+          return Object.keys(parentAttrs).some(path => 
+            path.endsWith(`.${key}`) || // matches nested paths like tags.0.id
+            path === key // matches direct paths
+          );
+        });
+
+        console.log(`Processing object types property: ${key}, isSelected: ${isSelected}`);
+        
+        if (isSelected) {
           let nestedTypeName = key;
           if (propSchema) {
             const preferredName = getPreferredName(propSchema);
@@ -120,18 +136,31 @@ export function buildObjectType(
       }
     }
     
-    // Normalize selectedAttrs for array item type: strip '0.' prefix from keys
+    // Handle both direct selection and nested selection for array items
     const parentSelected = selectedAttrs[typeName] || {};
-    const itemSelectedAttrs: Record<string, boolean> = {};
+    const existingItemAttrs = selectedAttrs[itemTypeName] || {};
+    const itemSelectedAttrs: Record<string, boolean> = { ...existingItemAttrs };
+
+    // Process array item selections (with '0.' prefix)
     for (const key in parentSelected) {
       if (key.startsWith("0.")) {
-        itemSelectedAttrs[key.slice(2)] = parentSelected[key];
+        const normalizedKey = key.slice(2);
+        itemSelectedAttrs[normalizedKey] = parentSelected[key];
       }
     }
+
+    // Process direct selections on the referenced type
+    if (hasRef(schema.items)) {
+      const refName = getRefName((schema.items as { $ref: string }).$ref);
+      const refSelectedAttrs = selectedAttrs[refName] || {};
+      Object.assign(itemSelectedAttrs, refSelectedAttrs);
+    }
+
     const normalizedSelectedAttrs = {
       ...selectedAttrs,
       [itemTypeName]: itemSelectedAttrs,
     };
+
     return new GraphQLList(
       buildObjectType(
         itemTypeName,
@@ -208,19 +237,26 @@ function enrichSelectedAttrsForRef(
   path: string[],
   refName: string
 ): SelectedAttributes {
-  let nestedSelectedAttrs = selectedAttrs[refName];
+  // Start with any existing selections for the referenced type
+  const existingSelectedAttrs = selectedAttrs[refName] || {};
+  const nestedSelectedAttrs = { ...existingSelectedAttrs };
 
-  if (!nestedSelectedAttrs || Object.keys(nestedSelectedAttrs).length === 0) {
-    const parentSelected = selectedAttrs[typeName] || {};
-    const prefix = path.length > 0 ? path.join(".") + "." : "";
-    nestedSelectedAttrs = {};
+  // Process nested selections from the parent type
+  const parentSelected = selectedAttrs[typeName] || {};
+  const prefix = path.length > 0 ? path.join(".") + "." : "";
 
-    for (const attrPath in parentSelected) {
-      if (attrPath.startsWith(prefix)) {
-        const rest = attrPath.slice(prefix.length);
-        if (rest && !rest.includes(".")) {
+  for (const attrPath in parentSelected) {
+    // Only process attributes that are selected (true)
+    if (!parentSelected[attrPath]) continue;
+
+    if (attrPath.startsWith(prefix)) {
+      const rest = attrPath.slice(prefix.length);
+      if (rest) {
+        if (!rest.includes(".")) {
+          // Direct field selection
           nestedSelectedAttrs[rest] = true;
-        } else if (rest) {
+        } else {
+          // Nested field selection
           const first = rest.split(".")[0];
           nestedSelectedAttrs[first] = true;
         }
@@ -228,7 +264,10 @@ function enrichSelectedAttrsForRef(
     }
   }
 
-  return { ...selectedAttrs, [refName]: nestedSelectedAttrs };
+  return {
+    ...selectedAttrs,
+    [refName]: nestedSelectedAttrs
+  };
 }
 
 function mapToGraphQLOutputTypeInternal(

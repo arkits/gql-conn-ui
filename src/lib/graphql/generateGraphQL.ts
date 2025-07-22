@@ -6,7 +6,6 @@ import {
 } from 'graphql';
 import type { OpenAPISpec, SelectedAttributes, SelectedEndpoints } from '../../types/openapi';
 import type { TypeMaps } from './types';
-import { enrichSelectedAttributes } from './selectionEnricher';
 import { processOperation } from './operationProcessor';
 
 export function generateGraphQLSchemaFromSelections(
@@ -16,8 +15,6 @@ export function generateGraphQLSchemaFromSelections(
   requiredScopes: string[][] = [["test"]]
 ): string {
   if (!openApi) return '';
-
-  const enrichedAttrs = enrichSelectedAttributes(selectedAttrs, openApi);
   
   const typeMaps: TypeMaps = {
     output: {},
@@ -38,7 +35,7 @@ export function generateGraphQLSchemaFromSelections(
     const details = methods[method.toLowerCase()];
     if (!details) continue;
 
-    const result = processOperation(path, method.toLowerCase(), details, openApi, enrichedAttrs, typeMaps);
+    const result = processOperation(path, method.toLowerCase(), details, openApi, selectedAttrs, typeMaps);
     
     if (result) {
       queryFields[result.operationId] = {

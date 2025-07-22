@@ -205,8 +205,8 @@ export function buildObjectType(
 
     const gqlType = new GraphQLObjectType({
       name,
-      fields,
-      description: schema.description,
+      fields
+      // Removed description to avoid duplicate comments in generated schema
     });
     typeMaps.output[name] = gqlType;
     return gqlType;

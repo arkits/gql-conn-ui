@@ -137,6 +137,34 @@ describe('configGenerator', () => {
       
       expect(result).toBe('# Application config YAML will appear here\n');
     });
+
+    it('generates correct YAML for selected endpoints', () => {
+      const result = generateAppConfigYaml(mockOpenApi, mockSelectedEndpoints);
+      const expectedYaml = `version: 1
+endpoints:
+  Api/getPets:
+    http:
+      method: GET
+      url:
+        template: /pets
+        path_params:
+          - id
+  Api/createPet:
+    http:
+      method: POST
+      url:
+        template: /pets
+        path_params: []
+  Api/getPetById:
+    http:
+      method: GET
+      url:
+        template: /pets/{id}
+        path_params:
+          - id
+`;
+      expect(result).toBe(expectedYaml);
+    });
   });
 });
 

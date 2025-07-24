@@ -1,4 +1,4 @@
-// import yaml from "js-yaml";
+import yaml from "js-yaml";
 import type { SelectedEndpoints, OpenAPISpec } from '../../types/openapi';
 
 interface Parameter {
@@ -53,5 +53,5 @@ export function generateAppConfigYaml(openApi: OpenAPISpec | null, selectedEndpo
     endpoints,
   };
   // Replace YAML output with JSON for now, or use another YAML serializer if needed
-  return '---\n' + JSON.stringify(config, null, 2) + '\n';
+  return yaml.dump(config);
 } 

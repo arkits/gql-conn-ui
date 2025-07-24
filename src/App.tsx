@@ -6,6 +6,7 @@ import { TreeView } from "./components/TreeView";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
 import { SideDrawer } from "./components/SideDrawer";
+import { ResizablePanels } from './components/ResizablePanels';
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { useSettings } from "./hooks/useSettings";
 
@@ -168,181 +169,179 @@ function AppContent() {
           </Flex>
         </Flex>
         
-        {/* Main Content */}
         <Flex flex="1" overflow="hidden">
-          {/* Left: OpenAPI Tree */}
-          <Box 
-            w="40%" 
-            minW="320px" 
-            maxW="600px" 
-            p={6} 
-            overflowY="auto" 
-            borderRight="1px solid" 
-            borderColor={darkMode ? 'gray.700' : 'gray.200'} 
-            bg={darkMode ? '#18181B' : 'white'}
-          >
-            <Heading size="sm" mb={4} color={darkMode ? 'teal.300' : 'teal.600'}>
-              OpenAPI Spec
-            </Heading>
-            {openApiTree.length > 0 ? (
-              <TreeView 
-                tree={openApiTree} 
-                openApi={openApi} 
-                darkMode={darkMode} 
-                selectedAttrs={selectedAttrs} 
-                onAttrToggle={handleAttrToggle} 
-                onSelectAllAttrs={handleSelectAllAttrs} 
-              />
-            ) : (
-              <Box color={darkMode ? 'gray.400' : 'gray.600'}>
-                Upload an OpenAPI spec to visualize endpoints.
-              </Box>
-            )}
-          </Box>
-          
-          {/* Right: GraphQL Schema Editor with Tabs */}
-          <Box 
-            flex="1" 
-            p={6} 
-            overflowY="hidden" 
-            bg={darkMode ? 'gray.900' : 'gray.50'} 
-            display="flex" 
-            flexDirection="column" 
-            minH={0} 
-            h="100%"
-          >
-            <TabsRoot variant="enclosed" fitted defaultValue="schema">
-              <TabsList 
-                mb={4} 
-                bg={darkMode ? '#23232B' : '#EDF2F7'} 
-                borderRadius="md" 
-                boxShadow="sm" 
-                border="none" 
-                p={1}
+          <ResizablePanels
+            darkMode={darkMode}
+            leftPanel={
+              <Box
+                p={6}
+                overflowY="auto"
+                h="100%"
+                bg={darkMode ? '#18181B' : 'white'}
               >
-                <TabsTrigger 
-                  value="schema"
-                  style={{
-                    color: darkMode ? '#F1F1F1' : '#2D3748',
-                    fontWeight: 600,
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    background: 'none',
-                    fontSize: '0.875rem',
-                  }}
-                  _selected={{
-                    color: darkMode ? '#63B3ED' : '#2B6CB0',
-                    bg: darkMode ? '#18181B' : '#fff',
-                    boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
-                  }}
-                  borderRadius="md"
-                  px={3}
-                  py={1}
-                >
-                  GraphQL Schema
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="yaml"
-                  style={{
-                    color: darkMode ? '#F1F1F1' : '#2D3748',
-                    fontWeight: 600,
-                    fontFamily: 'Inter, system-ui, sans-serif',
-                    background: 'none',
-                    fontSize: '0.875rem',
-                  }}
-                  _selected={{
-                    color: darkMode ? '#63B3ED' : '#2B6CB0',
-                    bg: darkMode ? '#18181B' : '#fff',
-                    boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
-                  }}
-                  borderRadius="md"
-                  px={3}
-                  py={1}
-                >
-                  App Config YAML
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContentGroup display="flex" flexDirection="column" flex={1} minH={0} h="100%">
-                <TabsContent 
-                  value="schema" 
-                  flex={1} 
-                  minH={0} 
-                  h="100%" 
-                  display="flex" 
-                  flexDirection="column"
-                >
-                  <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
-                    GraphQL Schema
-                  </Heading>
-                  <Box 
-                    borderRadius="md" 
-                    overflow="auto" 
-                    boxShadow="md" 
-                    border="1px solid" 
-                    borderColor={darkMode ? 'gray.700' : 'gray.200'} 
-                    flex={1} 
-                    minH={0} 
-                    h="100%" 
-                    display="flex" 
-                    flexDirection="column"
-                  >
-                    <MonacoEditor
-                      height="100%"
-                      width="100%"
-                      defaultLanguage="graphql"
-                      theme={darkMode ? "vs-dark" : "light"}
-                      value={graphqlSchema}
-                      options={{ 
-                        minimap: { enabled: false }, 
-                        scrollBeyondLastLine: true, 
-                        automaticLayout: true,
-                        fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
-                      }}
-                    />
+                <Heading size="sm" mb={4} color={darkMode ? 'teal.300' : 'teal.600'}>
+                  OpenAPI Spec
+                </Heading>
+                {openApiTree.length > 0 ? (
+                  <TreeView
+                    tree={openApiTree}
+                    openApi={openApi}
+                    darkMode={darkMode}
+                    selectedAttrs={selectedAttrs}
+                    onAttrToggle={handleAttrToggle}
+                    onSelectAllAttrs={handleSelectAllAttrs}
+                  />
+                ) : (
+                  <Box color={darkMode ? 'gray.400' : 'gray.600'}>
+                    Upload an OpenAPI spec to visualize endpoints.
                   </Box>
-                </TabsContent>
-                
-                <TabsContent 
-                  value="yaml" 
-                  flex={1} 
-                  minH={0} 
-                  h="100%" 
-                  display="flex" 
-                  flexDirection="column"
-                >
-                  <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
-                    App Config YAML
-                  </Heading>
-                  <Box 
-                    borderRadius="md" 
-                    overflow="auto" 
-                    boxShadow="md" 
-                    border="1px solid" 
-                    borderColor={darkMode ? 'gray.700' : 'gray.200'} 
-                    flex={1} 
-                    minH={0} 
-                    h="100%" 
-                    display="flex" 
-                    flexDirection="column"
+                )}
+              </Box>
+            }
+            rightPanel={
+              <Box
+                p={6}
+                overflowY="hidden"
+                bg={darkMode ? 'gray.900' : 'gray.50'}
+                display="flex"
+                flexDirection="column"
+                minH={0}
+                h="100%"
+              >
+                <TabsRoot variant="enclosed" fitted defaultValue="schema">
+                  <TabsList
+                    mb={4}
+                    bg={darkMode ? '#23232B' : '#EDF2F7'}
+                    borderRadius="md"
+                    boxShadow="sm"
+                    border="none"
+                    p={1}
                   >
-                    <MonacoEditor
-                      height="100%"
-                      width="100%"
-                      defaultLanguage="yaml"
-                      theme={darkMode ? "vs-dark" : "light"}
-                      value={appConfigYaml}
-                      options={{ 
-                        minimap: { enabled: false }, 
-                        scrollBeyondLastLine: true, 
-                        automaticLayout: true,
-                        fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
+                    <TabsTrigger
+                      value="schema"
+                      style={{
+                        color: darkMode ? '#F1F1F1' : '#2D3748',
+                        fontWeight: 600,
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        background: 'none',
+                        fontSize: '0.875rem',
                       }}
-                    />
-                  </Box>
-                </TabsContent>
-              </TabsContentGroup>
-            </TabsRoot>
-          </Box>
+                      _selected={{
+                        color: darkMode ? '#63B3ED' : '#2B6CB0',
+                        bg: darkMode ? '#18181B' : '#fff',
+                        boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
+                      }}
+                      borderRadius="md"
+                      px={3}
+                      py={1}
+                    >
+                      GraphQL Schema
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="yaml"
+                      style={{
+                        color: darkMode ? '#F1F1F1' : '#2D3748',
+                        fontWeight: 600,
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        background: 'none',
+                        fontSize: '0.875rem',
+                      }}
+                      _selected={{
+                        color: darkMode ? '#63B3ED' : '#2B6CB0',
+                        bg: darkMode ? '#18181B' : '#fff',
+                        boxShadow: darkMode ? '0 2px 8px #0004' : '0 2px 8px #0001',
+                      }}
+                      borderRadius="md"
+                      px={3}
+                      py={1}
+                    >
+                      App Config YAML
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContentGroup display="flex" flexDirection="column" flex={1} minH={0} h="100%">
+                    <TabsContent
+                      value="schema"
+                      flex={1}
+                      minH={0}
+                      h="100%"
+                      display="flex"
+                      flexDirection="column"
+                    >
+                      <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
+                        GraphQL Schema
+                      </Heading>
+                      <Box
+                        borderRadius="md"
+                        overflow="auto"
+                        boxShadow="md"
+                        border="1px solid"
+                        borderColor={darkMode ? 'gray.700' : 'gray.200'}
+                        flex={1}
+                        minH={0}
+                        h="100%"
+                        display="flex"
+                        flexDirection="column"
+                      >
+                        <MonacoEditor
+                          height="100%"
+                          width="100%"
+                          defaultLanguage="graphql"
+                          theme={darkMode ? "vs-dark" : "light"}
+                          value={graphqlSchema}
+                          options={{
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: true,
+                            automaticLayout: true,
+                            fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
+                          }}
+                        />
+                      </Box>
+                    </TabsContent>
+
+                    <TabsContent
+                      value="yaml"
+                      flex={1}
+                      minH={0}
+                      h="100%"
+                      display="flex"
+                      flexDirection="column"
+                    >
+                      <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
+                        App Config YAML
+                      </Heading>
+                      <Box
+                        borderRadius="md"
+                        overflow="auto"
+                        boxShadow="md"
+                        border="1px solid"
+                        borderColor={darkMode ? 'gray.700' : 'gray.200'}
+                        flex={1}
+                        minH={0}
+                        h="100%"
+                        display="flex"
+                        flexDirection="column"
+                      >
+                        <MonacoEditor
+                          height="100%"
+                          width="100%"
+                          defaultLanguage="yaml"
+                          theme={darkMode ? "vs-dark" : "light"}
+                          value={appConfigYaml}
+                          options={{
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: true,
+                            automaticLayout: true,
+                            fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
+                          }}
+                        />
+                      </Box>
+                    </TabsContent>
+                  </TabsContentGroup>
+                </TabsRoot>
+              </Box>
+            }
+          />
         </Flex>
         
         {/* SideDrawer */}

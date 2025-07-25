@@ -4,39 +4,60 @@ import yaml from "js-yaml";
 import type { OpenAPISpec, TreeNode } from "../types/openapi";
 import { parseOpenApiToTree } from "../utils/openapi";
 
+// Helper function to process the file content
+async function processFileContent(content: string) {
+  let rawSpec;
+  try {
+    rawSpec = JSON.parse(content);
+  } catch {
+    try {
+      rawSpec = yaml.load(content);
+      if (typeof rawSpec === 'string') {
+        // If yaml.load returns a string, it's likely an error or not a valid object
+        rawSpec = yaml.load(rawSpec);
+      }
+    } catch {
+      throw new Error("Invalid OpenAPI file: must be valid JSON or YAML");
+    }
+  }
+
+  if (!rawSpec || typeof rawSpec !== 'object') {
+    throw new Error("Invalid OpenAPI content: does not resolve to an object");
+  }
+
+  const client = await SwaggerClient({ spec: rawSpec });
+  return client.spec as OpenAPISpec;
+}
+
+
 export function useFileUpload() {
   const [openApi, setOpenApi] = useState<OpenAPISpec | null>(null);
   const [openApiTree, setOpenApiTree] = useState<TreeNode[]>([]);
 
+  const processOpenApiSpec = useCallback(async (spec: OpenAPISpec) => {
+    try {
+      console.log("Parsed OpenAPI spec:", spec);
+      const tree = parseOpenApiToTree(spec);
+      console.log("Generated OpenAPI tree:", tree);
+      setOpenApi(spec);
+      setOpenApiTree(tree);
+      return { success: true, spec };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to process spec",
+      };
+    }
+  }, []);
+
   const handleFileUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+    async (file: File) => {
       if (!file) return { success: false, error: "No file selected" };
 
       try {
         const text = await file.text();
-        let rawSpec;
-        try {
-          rawSpec = JSON.parse(text);
-        } catch {
-          try {
-            rawSpec = yaml.load(text);
-          } catch {
-            return {
-              success: false,
-              error: "Invalid OpenAPI file: must be valid JSON or YAML",
-            };
-          }
-        }
-        const client = await SwaggerClient({ spec: rawSpec });
-        // Convert to plain object for compatibility
-        const spec = client.spec as OpenAPISpec;
-        console.log("Parsed OpenAPI spec:", spec);
-        const tree = parseOpenApiToTree(spec);
-        console.log("Generated OpenAPI tree:", tree);
-        setOpenApi(spec);
-        setOpenApiTree(tree);
-        return { success: true, spec };
+        const spec = await processFileContent(text);
+        return await processOpenApiSpec(spec);
       } catch (error) {
         return {
           success: false,
@@ -45,7 +66,7 @@ export function useFileUpload() {
         };
       }
     },
-    []
+    [processOpenApiSpec]
   );
 
   const clearData = useCallback(() => {

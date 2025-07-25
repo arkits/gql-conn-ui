@@ -6,8 +6,11 @@ on:
       - master
 
 jobs:
-  lint:
+  build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        command: [lint, test, build]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -15,44 +18,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Lint
-        run: npm run lint
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Test
-        run: npm run test
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build
-        run: npm run build
+      - name: Run ${{ matrix.command }}
+        run: npm run ${{ matrix.command }}

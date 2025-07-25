@@ -13,6 +13,7 @@ import { useSettings } from "./hooks/useSettings";
 import { useFileUpload } from "./hooks/useFileUpload";
 import { useSelection } from "./hooks/useSelection";
 import { useGraphQLGeneration } from "./hooks/useGraphQLGeneration";
+import { useCodeLensProvider } from "./hooks/useCodeLens";
 import { Dialog, CloseButton } from "@chakra-ui/react";
 
 function AppContent() {
@@ -27,6 +28,7 @@ function AppContent() {
   const { openApi, openApiTree, handleFileUpload } = useFileUpload();
   const { selectedAttrs, selectedEndpoints, handleAttrToggle, handleSelectAllAttrs, clearSelection } = useSelection();
   const { graphqlSchema, appConfigYaml } = useGraphQLGeneration(openApi, selectedAttrs, selectedEndpoints);
+  const { editorDidMount } = useCodeLensProvider();
 
   const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const result = await handleFileUpload(e);
@@ -289,6 +291,7 @@ function AppContent() {
                           defaultLanguage="graphql"
                           theme={darkMode ? "vs-dark" : "light"}
                           value={graphqlSchema}
+                          onMount={editorDidMount}
                           options={{
                             minimap: { enabled: false },
                             scrollBeyondLastLine: true,

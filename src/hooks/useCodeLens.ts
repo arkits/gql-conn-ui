@@ -12,7 +12,7 @@ export function useCodeLensProvider() {
 
   const editorDidMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     disposableRef.current = monaco.languages.registerCodeLensProvider('graphql', {
-      provideCodeLenses: (model, token) => {
+      provideCodeLenses: (model) => {
         const lenses: monaco.languages.CodeLens[] = [];
         const lines = model.getValue().split('\\n');
 
@@ -36,7 +36,7 @@ export function useCodeLensProvider() {
           dispose: () => {},
         };
       },
-      resolveCodeLens: (model, codeLens, token) => {
+      resolveCodeLens: (_, codeLens) => {
         return codeLens;
       },
     });

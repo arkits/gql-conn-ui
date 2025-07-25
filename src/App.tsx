@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDropzone } from 'react-dropzone';
 import { Box, Flex, Heading, HStack, IconButton } from "@chakra-ui/react";
 import { Sun, Moon, Menu, HelpCircle } from "lucide-react";

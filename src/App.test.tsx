@@ -11,13 +11,6 @@ vi.mock('@monaco-editor/react', () => ({
   ),
 }));
 
-// Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  Sun: () => <div data-testid="sun-icon" />,
-  Moon: () => <div data-testid="moon-icon" />,
-  Menu: () => <div data-testid="menu-icon" />,
-  HelpCircle: () => <div data-testid="help-circle-icon" />,
-}));
 
 // Mock the hooks
 vi.mock('./hooks/useFileUpload', () => ({

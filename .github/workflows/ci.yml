@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        command: [lint, test:cov, build]
+        command: [lint, test:coverage, build]
     steps:
       - name: Checkout
         uses: actions/checkout@v3

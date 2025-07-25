@@ -105,9 +105,8 @@ function AppContent() {
                 size="md"
                 color={darkMode ? 'teal.300' : 'teal.600'}
                 _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-              >
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-              </IconButton>
+                icon={darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              />
               <Dialog.Root open={helpOpen} onOpenChange={o => setHelpOpen(o.open)}>
                 <Dialog.Trigger asChild>
                   <IconButton
@@ -116,9 +115,8 @@ function AppContent() {
                     size="md"
                     color={darkMode ? 'purple.400' : 'purple.600'}
                     _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-                  >
-                    <HelpCircle size={20} />
-                  </IconButton>
+                    icon={<HelpCircle size={20} />}
+                  />
                 </Dialog.Trigger>
                 <Dialog.Backdrop />
                 <Dialog.Positioner>
@@ -164,9 +162,8 @@ function AppContent() {
                 size="md"
                 color={darkMode ? 'gray.300' : 'gray.700'}
                 _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-              >
-                <Menu size={20} />
-              </IconButton>
+                icon={<Menu size={20} />}
+              />
             </HStack>
           </Flex>
         </Flex>

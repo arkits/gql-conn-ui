@@ -281,5 +281,99 @@ describe('OpenAPI Utils', () => {
         }
       ]);
     });
+
+    it('should handle allOf', () => {
+      const schema = {
+        allOf: [
+          { $ref: '#/components/schemas/User' },
+          {
+            type: 'object',
+            properties: {
+              extra: { type: 'string' }
+            }
+          }
+        ]
+      };
+
+      const sample = generateSampleFromSchema(schema, mockOpenApi);
+
+      expect(sample).toEqual({
+        id: 'string',
+        name: 'string',
+        age: 0,
+        extra: 'string'
+      });
+    });
+
+    it('should handle schema with properties but no type', () => {
+      const schema = {
+        properties: {
+          name: { type: 'string' }
+        }
+      };
+
+      const sample = generateSampleFromSchema(schema, mockOpenApi);
+      expect(sample).toEqual({ name: 'string' });
+    });
+
+    it('should use example if provided', () => {
+      const schema = {
+        type: 'string',
+        example: 'test'
+      };
+
+      const sample = generateSampleFromSchema(schema, mockOpenApi);
+      expect(sample).toBe('test');
+    });
+  });
+
+  describe('collectPaths with arrays', () => {
+    it('should collect paths from nested objects with arrays', () => {
+      const obj = {
+        name: 'John',
+        profiles: [
+          {
+            email: 'john@example.com',
+            settings: {
+              theme: 'dark'
+            }
+          }
+        ]
+      };
+
+      const paths = collectPaths(obj);
+      expect(paths).toEqual([
+        'name',
+        'profiles',
+        'profiles.0',
+        'profiles.0.email',
+        'profiles.0.settings',
+        'profiles.0.settings.theme'
+      ]);
+    });
+  });
+
+  describe('parseOpenApiToTree with direct schema', () => {
+    it('should handle response with direct schema', () => {
+      const openApi: OpenAPISpec = {
+        paths: {
+          '/users': {
+            get: {
+              operationId: 'getUsers',
+              responses: {
+                '200': {
+                  // @ts-expect-error - testing invalid schema
+                  schema: { type: 'array', items: { $ref: '#/components/schemas/User' } }
+                }
+              }
+            }
+          }
+        }
+      };
+
+      const tree = parseOpenApiToTree(openApi);
+      expect(tree).toHaveLength(1);
+      expect(tree[0].methods[0].details.responses['200'].content['application/json'].schema).toBeDefined();
+    });
   });
 });

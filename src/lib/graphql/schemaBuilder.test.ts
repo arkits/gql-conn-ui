@@ -403,5 +403,135 @@ describe('schemaBuilder', () => {
       expect(result).toBeInstanceOf(GraphQLInputObjectType);
       expect(mockTypeMaps.input['PetInput']).toBe(result);
     });
+
+    it('handles array types for input', () => {
+      const schema: OpenAPISchema = {
+        type: 'array',
+        items: { $ref: '#/components/schemas/Pet' },
+      };
+
+      const result = buildInputType(
+        'PetsInput',
+        schema,
+        mockOpenApi,
+        mockTypeMaps
+      );
+      expect(result).toBeInstanceOf(GraphQLList);
+    });
+
+    it('handles merged schema for input type', () => {
+      const schema: OpenAPISchema = {
+        $ref: '#/components/schemas/Pet',
+        type: 'object',
+        properties: {
+          extra: { type: 'string' },
+        },
+      };
+
+      const result = buildInputType('PetInput', schema, mockOpenApi, mockTypeMaps);
+      expect(result).toBeInstanceOf(GraphQLInputObjectType);
+      const fields = (result as GraphQLInputObjectType).getFields();
+      expect(Object.keys(fields)).toContain('extra');
+    });
   });
-}); 
+
+  describe('buildObjectType with allOf', () => {
+    it('handles allOf correctly', () => {
+      const schema: OpenAPISchema = {
+        allOf: [
+          { $ref: '#/components/schemas/Pet' },
+          {
+            type: 'object',
+            properties: {
+              extra: { type: 'string' },
+            },
+          },
+        ],
+      };
+
+      const selectedAttrs = {
+        ...mockSelectedAttrs,
+        Pet: {
+          ...mockSelectedAttrs.Pet,
+          extra: true,
+        },
+      };
+
+      const result = buildObjectType(
+        'Pet',
+        schema,
+        mockOpenApi,
+        selectedAttrs,
+        'Pet',
+        [],
+        mockTypeMaps
+      );
+
+      expect(result).toBeInstanceOf(GraphQLObjectType);
+      const fields = (result as GraphQLObjectType).getFields();
+      expect(Object.keys(fields)).toContain('id');
+      expect(Object.keys(fields)).toContain('name');
+      expect(Object.keys(fields)).toContain('extra');
+    });
+  });
+
+  describe('buildObjectType with complex array selections', () => {
+    it('handles nested selections in arrays', () => {
+      const schema: OpenAPISchema = {
+        type: 'array',
+        items: { $ref: '#/components/schemas/Pet' },
+      };
+
+      const selectedAttrs = {
+        Pets: {
+          '0.id': true,
+        },
+        Pet: {
+          name: true,
+        },
+      };
+
+      const result = buildObjectType(
+        'Pets',
+        schema,
+        mockOpenApi,
+        selectedAttrs,
+        'Pets',
+        [],
+        mockTypeMaps
+      );
+
+      expect(result).toBeInstanceOf(GraphQLList);
+      const objectType = (result as GraphQLList<GraphQLObjectType>).ofType;
+      const fields = objectType.getFields();
+      expect(Object.keys(fields)).toContain('id');
+      expect(Object.keys(fields)).toContain('name');
+    });
+  });
+
+  describe('buildObjectType with merged schema', () => {
+    it('handles merged schema correctly', () => {
+      const schema: OpenAPISchema = {
+        $ref: '#/components/schemas/Pet',
+        type: 'object',
+        properties: {
+          extra: { type: 'string' },
+        },
+      };
+      const selectedAttrs = {
+        Pet: {
+          id: true,
+          name: true,
+          extra: true,
+        },
+      };
+
+      const result = buildObjectType('Pet', schema, mockOpenApi, selectedAttrs, 'Pet', [], mockTypeMaps);
+      expect(result).toBeInstanceOf(GraphQLObjectType);
+      const fields = (result as GraphQLObjectType).getFields();
+      expect(Object.keys(fields)).toContain('id');
+      expect(Object.keys(fields)).toContain('name');
+      expect(Object.keys(fields)).toContain('extra');
+    });
+  });
+});

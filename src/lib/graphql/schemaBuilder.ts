@@ -139,23 +139,18 @@ export function buildObjectType(
 
   // Handle schemas that have both $ref and direct properties (merged schemas)
   if (schema.$ref && (schema.properties || schema.type)) {
-    // This schema has been pre-resolved and merged, use it directly
-    // but still extract the ref name for type naming if available
     const refName = getRefName(schema.$ref);
-    const preferredName = refName || name;
-    
-    // Use the merged schema directly
+    const resolved = resolveRef(schema.$ref, openApi);
     const mergedSchema: OpenAPISchema = {
+      ...resolved,
       ...schema,
-      // Remove the $ref since we're using the merged data
-      $ref: undefined
+      properties: {
+        ...resolved?.properties,
+        ...schema.properties,
+      },
+      $ref: undefined,
     };
-    
-    // Special handling for arrays that have been merged
-    if (schema.type === "array") {
-      return buildObjectType(preferredName, mergedSchema, openApi, selectedAttrs, preferredName, path, typeMaps);
-    }
-    
+    const preferredName = refName || name;
     return buildObjectType(preferredName, mergedSchema, openApi, selectedAttrs, typeName, path, typeMaps);
   }
 
@@ -330,14 +325,22 @@ export function buildInputType(
   // Handle merged schemas (with $ref and direct properties)
   if (schema.$ref && (schema.properties || schema.type)) {
     const refName = getRefName(schema.$ref);
-    const preferredName = (refName || name) + "Input";
-    
+    const resolved = resolveRef(schema.$ref, openApi);
     const mergedSchema: OpenAPISchema = {
+      ...resolved,
       ...schema,
-      $ref: undefined
+      properties: {
+        ...resolved?.properties,
+        ...schema.properties,
+      },
+      $ref: undefined,
     };
-    
+    const preferredName = (refName || name) + "Input";
     return buildInputType(preferredName, mergedSchema, openApi, typeMaps);
+  }
+
+  if (schema.type === 'array') {
+    return new GraphQLList(mapToGraphQLInputTypeInternal(schema.items, openApi, typeMaps, name + "Item"));
   }
 
   if (schema.type === "object" || (schema.properties && !schema.type)) {

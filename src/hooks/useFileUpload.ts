@@ -20,6 +20,7 @@ export function useFileUpload() {
           rawSpec = JSON.parse(text);
         } catch {
           try {
+            console.log('trying yaml');
             rawSpec = yaml.load(text);
           } catch {
             return {
@@ -38,6 +39,7 @@ export function useFileUpload() {
         setOpenApiTree(tree);
         return { success: true, spec };
       } catch (error) {
+        console.error('File upload error:', error);
         return {
           success: false,
           error:

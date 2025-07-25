@@ -26,7 +26,8 @@
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-resizable-panels": "^2.0.19",
-    "swagger-client": "^3.35.6"
+    "swagger-client": "^3.35.6",
+    "monaco-editor": "^0.45.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",

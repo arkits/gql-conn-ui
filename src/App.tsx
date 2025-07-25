@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Box, Flex, Heading, HStack, Input, IconButton } from "@chakra-ui/react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useDropzone } from 'react-dropzone';
+import { Box, Flex, Heading, HStack, IconButton } from "@chakra-ui/react";
 import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
@@ -28,14 +29,20 @@ function AppContent() {
   const { selectedAttrs, selectedEndpoints, handleAttrToggle, handleSelectAllAttrs, clearSelection } = useSelection();
   const { graphqlSchema, appConfigYaml } = useGraphQLGeneration(openApi, selectedAttrs, selectedEndpoints);
 
-  const onFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const result = await handleFileUpload(e);
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    const result = await handleFileUpload(file);
     if (result.success) {
       clearSelection();
     } else {
       alert(result.error);
     }
-  };
+  }, [handleFileUpload, clearSelection]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+
 
   return (
     <ErrorBoundary>
@@ -46,6 +53,7 @@ function AppContent() {
         w="100vw" 
         h="100vh" 
         className={darkMode ? "dark" : "light"}
+        position="relative"
       >
         {/* Header/Nav Bar */}
         <Flex
@@ -80,20 +88,14 @@ function AppContent() {
                 </Box>{" "}
                 GraphQL Converter
               </Heading>
-              <Input
-                type="file"
-                accept=".json,.yaml,.yml"
-                onChange={onFileUpload}
-                size="sm"
-                w="auto"
-                bg={darkMode ? 'gray.700' : 'gray.100'}
-                borderRadius="md"
-                _hover={{ bg: darkMode ? 'gray.600' : 'gray.200' }}
-                _focus={{ borderColor: 'teal.400' }}
-                fontSize="sm"
-                color={darkMode ? 'gray.100' : 'gray.800'}
-                p={1}
-              />
+              <Box {...getRootProps()} border="2px dashed" borderColor={isDragActive ? 'teal.300' : 'gray.500'} borderRadius="md" p={2} textAlign="center" cursor="pointer" _hover={{ bg: darkMode ? 'gray.700' : 'gray.100' }}>
+                <input {...getInputProps()} />
+                {
+                  isDragActive ?
+                    <p>Drop the files here ...</p> :
+                    <p>Drag 'n' drop or click to select files</p>
+                }
+              </Box>
             </HStack>
             <HStack gap={2}>
               <IconButton

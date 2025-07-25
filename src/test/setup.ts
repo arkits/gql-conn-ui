@@ -7,18 +7,13 @@ vi.mock('@monaco-editor/react', () => ({
   default: vi.fn(() => React.createElement('div', { 'data-testid': 'monaco-editor' }, 'Monaco Editor Mock')),
 }));
 
-// Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  Sun: vi.fn(() => React.createElement('div', { 'data-testid': 'sun-icon' }, 'Sun Icon')),
-  Moon: vi.fn(() => React.createElement('div', { 'data-testid': 'moon-icon' }, 'Moon Icon')),
-  Menu: vi.fn(() => React.createElement('div', { 'data-testid': 'menu-icon' }, 'Menu Icon')),
-  ChevronRight: vi.fn(() => React.createElement('div', { 'data-testid': 'chevron-right-icon' }, 'ChevronRight Icon')),
-  Trash2: vi.fn(() => React.createElement('div', { 'data-testid': 'trash-icon' }, 'Trash2 Icon')),
-  Plus: vi.fn(() => React.createElement('div', { 'data-testid': 'plus-icon' }, 'Plus Icon')),
-  X: vi.fn(() => React.createElement('div', { 'data-testid': 'x-icon' }, 'X Icon')),
-  Settings: vi.fn(() => React.createElement('div', { 'data-testid': 'settings-icon' }, 'Settings Icon')),
-  Check: vi.fn(() => React.createElement('div', { 'data-testid': 'check-icon' }, 'Check Icon')),
-}));
+vi.mock('@chakra-ui/react', async () => {
+  const actual = await vi.importActual('@chakra-ui/react');
+  return {
+    ...actual,
+    useToast: () => vi.fn(),
+  };
+});
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

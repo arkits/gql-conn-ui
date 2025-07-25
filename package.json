@@ -17,6 +17,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@monaco-editor/react": "^4.7.0",
+    "copy-to-clipboard": "^3.3.3",
     "framer-motion": "^12.23.6",
     "graphql": "^16.11.0",
     "js-yaml": "^4.1.0",

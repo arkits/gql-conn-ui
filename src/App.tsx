@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Box, Flex, Heading, HStack, Input, IconButton } from "@chakra-ui/react";
-import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
+import { Box, Flex, Heading, HStack, Input, IconButton, useToast } from "@chakra-ui/react";
+import { Sun, Moon, Menu, HelpCircle, Clipboard } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
+import copy from "copy-to-clipboard";
 import { TreeView } from "./components/TreeView";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
@@ -19,6 +20,7 @@ function AppContent() {
   const [darkMode, setDarkMode] = useState(true);
   const { isDrawerOpen, setIsDrawerOpen } = useSettings();
   const [helpOpen, setHelpOpen] = useState(false);
+  const toast = useToast();
   
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "light";
@@ -103,9 +105,8 @@ function AppContent() {
                 size="md"
                 color={darkMode ? 'teal.300' : 'teal.600'}
                 _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-              >
-                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-              </IconButton>
+                icon={darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              />
               <Dialog.Root open={helpOpen} onOpenChange={o => setHelpOpen(o.open)}>
                 <Dialog.Trigger asChild>
                   <IconButton
@@ -114,9 +115,8 @@ function AppContent() {
                     size="md"
                     color={darkMode ? 'purple.400' : 'purple.600'}
                     _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-                  >
-                    <HelpCircle size={20} />
-                  </IconButton>
+                    icon={<HelpCircle size={20} />}
+                  />
                 </Dialog.Trigger>
                 <Dialog.Backdrop />
                 <Dialog.Positioner>
@@ -162,9 +162,8 @@ function AppContent() {
                 size="md"
                 color={darkMode ? 'gray.300' : 'gray.700'}
                 _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
-              >
-                <Menu size={20} />
-              </IconButton>
+                icon={<Menu size={20} />}
+              />
             </HStack>
           </Flex>
         </Flex>
@@ -268,9 +267,28 @@ function AppContent() {
                       display="flex"
                       flexDirection="column"
                     >
-                      <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
-                        GraphQL Schema
-                      </Heading>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Heading size="sm" color={darkMode ? 'purple.400' : 'purple.600'}>
+                          GraphQL Schema
+                        </Heading>
+                        <IconButton
+                          aria-label="Copy GraphQL Schema"
+                          icon={<Clipboard size={18} />}
+                          onClick={() => {
+                            copy(graphqlSchema);
+                            toast({
+                              title: "GraphQL Schema copied to clipboard!",
+                              status: "success",
+                              duration: 2000,
+                              isClosable: true,
+                            });
+                          }}
+                          size="sm"
+                          variant="ghost"
+                          color={darkMode ? 'gray.400' : 'gray.600'}
+                          _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
+                        />
+                      </Flex>
                       <Box
                         borderRadius="md"
                         overflow="auto"
@@ -307,9 +325,28 @@ function AppContent() {
                       display="flex"
                       flexDirection="column"
                     >
-                      <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
-                        App Config YAML
-                      </Heading>
+                      <Flex justify="space-between" align="center" mb={4}>
+                        <Heading size="sm" color={darkMode ? 'purple.400' : 'purple.600'}>
+                          App Config YAML
+                        </Heading>
+                        <IconButton
+                          aria-label="Copy App Config YAML"
+                          icon={<Clipboard size={18} />}
+                          onClick={() => {
+                            copy(appConfigYaml);
+                            toast({
+                              title: "App Config YAML copied to clipboard!",
+                              status: "success",
+                              duration: 2000,
+                              isClosable: true,
+                            });
+                          }}
+                          size="sm"
+                          variant="ghost"
+                          color={darkMode ? 'gray.400' : 'gray.600'}
+                          _hover={{ bg: darkMode ? 'gray.700' : 'gray.200' }}
+                        />
+                      </Flex>
                       <Box
                         borderRadius="md"
                         overflow="auto"

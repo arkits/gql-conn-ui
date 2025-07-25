@@ -2,28 +2,26 @@ name: CI
 
 on:
   pull_request:
-  push:
     branches:
-      - main
+      - master
 
 jobs:
-  build_and_test:
+  build-and-test:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        command: [lint, test:coverage, build]
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
-        run: npm test
-
-      - name: Build project
-        run: npm run build
+      - name: Run ${{ matrix.command }}
+        run: npm run ${{ matrix.command }}

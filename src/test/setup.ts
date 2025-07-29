@@ -7,6 +7,10 @@ vi.mock('@monaco-editor/react', () => ({
   default: vi.fn(() => React.createElement('div', { 'data-testid': 'monaco-editor' }, 'Monaco Editor Mock')),
 }));
 
+vi.mock('graphql-voyager', () => ({
+  Voyager: vi.fn(() => React.createElement('div', { 'data-testid': 'graphql-voyager' }, 'GraphQL Voyager Mock')),
+}));
+
 vi.mock('lucide-react');
 
 // Mock window.matchMedia

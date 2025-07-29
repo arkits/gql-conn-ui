@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDropzone } from 'react-dropzone';
-import { Box, Flex, Heading, HStack, IconButton } from "@chakra-ui/react";
-import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
+import { Box, Flex, Heading, HStack, IconButton, Button, ButtonGroup } from "@chakra-ui/react";
+import { Sun, Moon, Menu, HelpCircle, Code, FileText } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
 import { Clipboard } from "./components/Clipboard";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
 import { SideDrawer } from "./components/SideDrawer";
+import { GraphQLVoyager } from './components/GraphQLVoyager';
 import { ResizablePanels } from './components/ResizablePanels';
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { useSettings } from "./hooks/useSettings";
@@ -17,10 +18,13 @@ import { useSelection } from "./hooks/useSelection";
 import { useGraphQLGeneration } from "./hooks/useGraphQLGeneration";
 import { Dialog, CloseButton } from "@chakra-ui/react";
 
+type SchemaView = 'code' | 'docs';
+
 function AppContent() {
   const [darkMode, setDarkMode] = useState(true);
   const { isDrawerOpen, setIsDrawerOpen } = useSettings();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [schemaView, setSchemaView] = useState<SchemaView>('code');
   
   useEffect(() => {
     document.body.className = darkMode ? "dark" : "light";
@@ -275,6 +279,22 @@ function AppContent() {
                         <Heading size="sm" color={darkMode ? 'purple.400' : 'purple.600'}>
                           GraphQL Schema
                         </Heading>
+                        <ButtonGroup isAttached variant="outline" size="sm">
+                           <IconButton
+                            aria-label="Code view"
+                            icon={<Code size={16} />}
+                            onClick={() => setSchemaView('code')}
+                            isActive={schemaView === 'code'}
+                            colorScheme={schemaView === 'code' ? 'teal' : 'gray'}
+                          />
+                          <IconButton
+                            aria-label="Docs view"
+                            icon={<FileText size={16} />}
+                            onClick={() => setSchemaView('docs')}
+                            isActive={schemaView === 'docs'}
+                            colorScheme={schemaView === 'docs' ? 'teal' : 'gray'}
+                          />
+                        </ButtonGroup>
                         <Clipboard textToCopy={graphqlSchema} darkMode={darkMode} />
                       </HStack>
                       <Box
@@ -289,19 +309,23 @@ function AppContent() {
                         display="flex"
                         flexDirection="column"
                       >
-                        <MonacoEditor
-                          height="100%"
-                          width="100%"
-                          defaultLanguage="graphql"
-                          theme={darkMode ? "vs-dark" : "light"}
-                          value={graphqlSchema}
-                          options={{
-                            minimap: { enabled: false },
-                            scrollBeyondLastLine: true,
-                            automaticLayout: true,
-                            fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
-                          }}
-                        />
+                        {schemaView === 'code' ? (
+                          <MonacoEditor
+                            height="100%"
+                            width="100%"
+                            defaultLanguage="graphql"
+                            theme={darkMode ? "vs-dark" : "light"}
+                            value={graphqlSchema}
+                            options={{
+                              minimap: { enabled: false },
+                              scrollBeyondLastLine: true,
+                              automaticLayout: true,
+                              fontFamily: "'Fira Mono', 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace"
+                            }}
+                          />
+                        ) : (
+                          <GraphQLVoyager graphqlSchema={graphqlSchema} darkMode={darkMode} />
+                        )}
                       </Box>
                     </TabsContent>
 

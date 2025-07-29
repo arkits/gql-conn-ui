@@ -4,6 +4,7 @@ import { Box, Flex, Heading, HStack, IconButton } from "@chakra-ui/react";
 import { Sun, Moon, Menu, HelpCircle } from "lucide-react";
 import MonacoEditor from "@monaco-editor/react";
 import { TreeView } from "./components/TreeView";
+import { Clipboard } from "./components/Clipboard";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { TabsRoot, TabsList, TabsTrigger, TabsContentGroup, TabsContent } from "@chakra-ui/react";
 import { SideDrawer } from "./components/SideDrawer";
@@ -270,9 +271,12 @@ function AppContent() {
                       display="flex"
                       flexDirection="column"
                     >
-                      <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
-                        GraphQL Schema
-                      </Heading>
+                      <HStack justify="space-between" mb={4}>
+                        <Heading size="sm" color={darkMode ? 'purple.400' : 'purple.600'}>
+                          GraphQL Schema
+                        </Heading>
+                        <Clipboard textToCopy={graphqlSchema} darkMode={darkMode} />
+                      </HStack>
                       <Box
                         borderRadius="md"
                         overflow="auto"
@@ -309,9 +313,12 @@ function AppContent() {
                       display="flex"
                       flexDirection="column"
                     >
-                      <Heading size="sm" mb={4} color={darkMode ? 'purple.400' : 'purple.600'}>
-                        App Config YAML
-                      </Heading>
+                      <HStack justify="space-between" mb={4}>
+                        <Heading size="sm" color={darkMode ? 'purple.400' : 'purple.600'}>
+                          App Config YAML
+                        </Heading>
+                        <Clipboard textToCopy={appConfigYaml} darkMode={darkMode} />
+                      </HStack>
                       <Box
                         borderRadius="md"
                         overflow="auto"
